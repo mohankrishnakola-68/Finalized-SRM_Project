@@ -371,6 +371,7 @@ function App() {
   const [mediaGallery, setMediaGallery] = useState([]);
   const [selectedMedia, setSelectedMedia] = useState(null); 
   const [currentSessionId, setCurrentSessionId] = useState(null); // MASTER SESSION TRACKING
+  const [isPatientBroadcasting, setIsPatientBroadcasting] = useState(false); // Global sync for broadcast status
 
   // ADDED: QUICK-LINK SUPPORT (Check URL for ?role=surgeon/patient/admin)
   useEffect(() => {
@@ -551,6 +552,7 @@ function App() {
       newSocket.on('location-update', (data) => {
         if (data.role !== role) {
           setRemoteLocation(data.location);
+          if (data.role === 'patient') setIsPatientBroadcasting(data.broadcastStatus);
         }
       });
 
@@ -568,6 +570,10 @@ function App() {
             setLiveFrame(frame);
          }
       });
+       
+       newSocket.on('broadcast-status', (status) => {
+          setIsPatientBroadcasting(status);
+       });
 
       return () => {
         newSocket.off();
@@ -676,11 +682,12 @@ function App() {
   // Fetch real-time IP Location
   // Broadcast Location
   useEffect(() => {
-    if (socket && localLocation) {
-      socket.emit('location-sync', { role, location: localLocation }); // Instantly emit on link
+    if (socket && (localLocation || role === 'patient')) {
+      const payload = { role, location: localLocation, broadcastStatus: patientCameraActive };
+      socket.emit('location-sync', payload);
       const interval = setInterval(() => {
-        socket.emit('location-sync', { role, location: localLocation });
-      }, 1000); // 1-second pulse to guarantee zero 'Awaiting Link' delay
+        socket.emit('location-sync', { ...payload, broadcastStatus: patientCameraActive });
+      }, 1000);
       return () => clearInterval(interval);
     }
   }, [socket, localLocation, role]);
@@ -1413,29 +1420,38 @@ function App() {
         {role === 'surgeon' && (
           <aside className="side-panel">
             {/* Pinned Sections (Fixed) */}
-            <div className="panel-section" style={{ opacity: selectedOrgan ? 1 : 0.3, pointerEvents: selectedOrgan ? 'auto' : 'none', transition: '0.4s', filter: selectedOrgan ? 'none' : 'grayscale(1)' }}>
+            <div className="panel-section" style={{ opacity: (selectedOrgan && !isPatientBroadcasting) ? 1 : 0.3, pointerEvents: (selectedOrgan && !isPatientBroadcasting) ? 'auto' : 'none', transition: '0.4s', filter: (selectedOrgan && !isPatientBroadcasting) ? 'none' : 'grayscale(1)' }}>
               <h3 className="panel-title"><Cpu size={14} /> 1. MASTER CONTROLS</h3>
-              <button className={`cyber-button ${systemState !== 'IDLE' ? 'disabled' : ''}`} onClick={runSimulationWorkflow} disabled={systemState !== 'IDLE' || !selectedOrgan}>1. INITIALIZE SCAN</button>
+              <button className={`cyber-button ${systemState !== 'IDLE' ? 'disabled' : ''}`} onClick={runSimulationWorkflow} disabled={systemState !== 'IDLE' || !selectedOrgan || isPatientBroadcasting}>1. INITIALIZE SCAN</button>
             </div>
 
-            <div className="panel-section" style={{ border: selectedOrgan ? '1px solid var(--safe-green)' : '1px solid var(--accent-cyan)', transition: '0.4s', boxShadow: selectedOrgan ? 'none' : '0 0 15px rgba(0, 229, 255, 0.2)' }}>
-              <h3 className="panel-title" style={{ color: selectedOrgan ? 'var(--safe-green)' : 'var(--accent-cyan)' }}><Target size={14} /> 2. SET ANATOMICAL TARGET</h3>
+            <div className="panel-section" style={{ border: isPatientBroadcasting ? '1px solid #ff3366' : (selectedOrgan ? '1px solid var(--safe-green)' : '1px solid var(--accent-cyan)'), transition: '0.4s', boxShadow: selectedOrgan ? 'none' : '0 0 15px rgba(0, 229, 255, 0.2)', opacity: isPatientBroadcasting ? 0.6 : 1 }}>
+              <h3 className="panel-title" style={{ color: isPatientBroadcasting ? '#ff3366' : (selectedOrgan ? 'var(--safe-green)' : 'var(--accent-cyan)') }}>
+                <Target size={14} /> 2. SET ANATOMICAL TARGET
+                {isPatientBroadcasting && <span className="pulse" style={{fontSize: '8px', color: '#ff3366', marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '4px'}}><div style={{width: '6px', height: '6px', background: '#ff3366', borderRadius: '50%'}}></div> BROADCAST ACTIVE</span>}
+              </h3>
               <select 
                 value={selectedOrgan} 
+                disabled={isPatientBroadcasting}
                 onChange={(e) => { setSelectedOrgan(e.target.value); playSciFiSound('engage'); }}
                 style={{
-                  width: '100%', background: 'rgba(0,0,0,0.6)', color: 'var(--accent-cyan)',
-                  border: '1px solid var(--accent-cyan)', padding: '10px',
-                  borderRadius: '4px', fontFamily: 'monospace', outline: 'none'
+                  width: '100%', background: 'rgba(0,0,0,0.6)', color: isPatientBroadcasting ? '#fff' : 'var(--accent-cyan)',
+                  border: isPatientBroadcasting ? '1px solid #ff3366' : '1px solid var(--accent-cyan)', padding: '10px',
+                  borderRadius: '4px', fontFamily: 'monospace', outline: 'none', cursor: isPatientBroadcasting ? 'not-allowed' : 'pointer'
                 }}
               >
-                <option value="">-- SELECT TARGET --</option>
+                <option value="">{isPatientBroadcasting ? '-- BLOCKED BY BROADCAST --' : '-- SELECT TARGET --'}</option>
                 <option value="Heart">CARDIAC (Heart)</option>
                 <option value="Brain">NEURAL (Brain)</option>
                 <option value="Spine">ORTHOPEDIC (Spine)</option>
-                <option value="Stomach">GASTRIC (Stomach)</option>
+                <option value="Stomach">GASTRIC (Stomach) </option>
                 <option value="Hand">METACARPAL (Hand)</option>
               </select>
+              {isPatientBroadcasting && (
+                <div style={{fontSize: '9px', color: '#ff3366', marginTop: '6px', textAlign: 'center', fontWeight: 'bold'}}>
+                  ⚠️ MANUAL OVERRIDE DISABLED DURING LIVE PATIENT BROADCAST
+                </div>
+              )}
             </div>
 
             {/* Scrollable Auxiliary Sections */}
@@ -1615,8 +1631,14 @@ function App() {
                          <input type="checkbox" checked={showLiveStream} onChange={() => setShowLiveStream(!showLiveStream)} />
                          <span className="slider" style={{background: showLiveStream ? '#ff3366' : 'var(--bg-panel)'}}></span>
                        </label>
-                       <span className="vision-toggle-label" style={{color: showLiveStream ? '#ff3366' : 'rgba(255,255,255,0.7)', fontWeight: showLiveStream ? 'bold' : 'normal'}}>
+                       <span className="vision-toggle-label" style={{color: showLiveStream ? '#ff3366' : 'rgba(255,255,255,0.7)', fontWeight: showLiveStream ? 'bold' : 'normal', display: 'flex', alignItems: 'center', gap: '8px'}}>
                           <Camera size={14}/> PATIENT VIDEO FEED
+                          {isPatientBroadcasting && (
+                            <div className="pulse" style={{display:'flex', alignItems:'center', gap:'4px', color:'#ff3366', fontSize:'10px'}}>
+                               <div style={{width:'8px', height:'8px', background:'#ff3366', borderRadius:'50%', boxShadow:'0 0 10px #ff3366'}}></div>
+                               LIVE
+                            </div>
+                          )}
                        </span>
                     </div>
                  )}
@@ -1629,8 +1651,11 @@ function App() {
                                alert('Browser Security Block: Camera access requires "localhost" or an HTTPS connection (or Chrome flags).');
                                return;
                             }
-                            setPatientCameraActive(!patientCameraActive);
-                         }} />
+                             const newState = !patientCameraActive;
+                             setPatientCameraActive(newState);
+                             setIsPatientBroadcasting(newState); // Local update
+                             if (socket) socket.emit('broadcast-status', newState);
+                          }} />
                          <span className="slider" style={{background: patientCameraActive ? '#ff3366' : 'var(--bg-panel)'}}></span>
                        </label>
                        <span className="vision-toggle-label" style={{color: patientCameraActive ? '#ff3366' : 'rgba(255,255,255,0.7)', fontWeight: patientCameraActive ? 'bold' : 'normal'}}>
