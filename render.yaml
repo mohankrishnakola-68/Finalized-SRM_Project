@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: haptic-q-surgery
+    env: node
+    plan: free
+    buildCommand: npm run build
+    startCommand: npm start
+    envVars:
+      - key: GEMINI_API_KEY
+        # You will enter your key in the Render dashboard after connecting
+        sync: false
+      - key: PORT
+        value: 3001
+      - key: NODE_ENV
+        value: production
