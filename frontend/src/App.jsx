@@ -1112,27 +1112,27 @@ function App() {
             <button className="role-btn patient" onClick={() => handleRoleSelect('patient')}><Monitor size={32} /><div className="role-text"><strong>PATIENT TERMINAL</strong><span>Remote Slave</span></div></button>
           </div>
 
-          <div className="private-join-portal" style={{marginTop: '40px', borderTop: '1px solid rgba(0, 243, 255, 0.2)', paddingTop: '20px', width: '100%', textAlign: 'left'}}>
-             <h3 style={{fontSize: '11px', color: 'var(--accent-cyan)', marginBottom: '12px', letterSpacing: '2px', fontWeight: 'bold'}}>
+          <div className="private-join-portal" style={{marginTop: '25px', borderTop: '1px solid rgba(0, 243, 255, 0.2)', paddingTop: '15px', width: '100%', textAlign: 'left'}}>
+             <h3 style={{fontSize: '10px', color: 'var(--accent-cyan)', marginBottom: '10px', letterSpacing: '2px', fontWeight: 'bold'}}>
                 <Lock size={12} style={{marginRight: '8px'}}/> 2. DIRECT PRIVATE LINK ACCESS
              </h3>
              <div style={{display: 'flex', gap: '10px', alignItems: 'center'}}>
                 <input 
                    value={tempRoomId}
                    onChange={(e) => setTempRoomId(e.target.value.toUpperCase())}
-                   placeholder="ENTER SECURE ROOM CODE..."
+                   placeholder="ENTER ROOM CODE..."
                    style={{
                      flex: 1, background: 'rgba(0, 243, 255, 0.05)', color: 'var(--accent-cyan)',
-                     border: '1px solid rgba(0, 243, 255, 0.3)', padding: '15px',
-                     fontSize: '14px', fontFamily: 'monospace', outline: 'none', borderRadius: '4px'
+                     border: '1px solid rgba(0, 243, 255, 0.3)', padding: '10px',
+                     fontSize: '12px', fontFamily: 'monospace', outline: 'none', borderRadius: '4px'
                    }}
                 />
                 <div style={{display: 'flex', flexDirection: 'column', gap: '5px'}}>
-                   <button onClick={() => handlePortalJoin('patient')} className="cyber-button-small" style={{fontSize: '9px', width: '120px', background: 'var(--accent-cyan)', color: '#000'}}>JOIN AS PATIENT</button>
-                   <button onClick={() => handlePortalJoin('surgeon')} className="cyber-button-small" style={{fontSize: '9px', width: '120px', borderColor: 'rgba(0, 243, 255, 0.4)'}}>JOIN AS SURGEON</button>
+                   <button onClick={() => handlePortalJoin('patient')} className="cyber-button-small" style={{fontSize: '9px', width: '110px', background: 'var(--accent-cyan)', color: '#000'}}>JOIN PATIENT</button>
+                   <button onClick={() => handlePortalJoin('surgeon')} className="cyber-button-small" style={{fontSize: '9px', width: '110px', borderColor: 'rgba(0, 243, 255, 0.4)'}}>JOIN SURGEON</button>
                 </div>
              </div>
-             <p style={{fontSize: '9px', opacity: 0.4, marginTop: '10px'}}>By entering a code, you bypass global discovery and enter an isolated quantum tunnel.</p>
+             <p style={{fontSize: '8px', opacity: 0.4, marginTop: '8px'}}>Enter a shared code to bypass discovery and enter an isolated tunnel.</p>
           </div>
         </div>
       </div>
