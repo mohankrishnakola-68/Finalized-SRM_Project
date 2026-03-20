@@ -9,7 +9,7 @@ import {
   Shield, Activity, Target, Network, Cpu, AlertTriangle, 
   Eye, Mic, MicOff, Send, Zap, Monitor, User, Heart, Thermometer, Wind,
   Lock, RefreshCw, BarChart3, Share2, BrainCircuit, Layout, Server, Bluetooth, Smartphone, 
-  Settings, UserCheck, CheckCircle2, Navigation, Check, X, Volume2, Camera
+  Settings, UserCheck, CheckCircle2, Navigation, Check, X, Volume2, Camera, LogOut
 } from 'lucide-react';
 
 const API_BASE = `/api`;
@@ -343,6 +343,11 @@ function App() {
     triggerFlash(`🔗 TUNNELING TO ROOM: ${tempRoomId.trim()}`);
     playSciFiSound('engage');
   }; // Private room state
+
+  // Real-time locations
+  const [localLocation, setLocalLocation] = useState('');
+  const [remoteLocation, setRemoteLocation] = useState('AWAITING LINK');
+  const [locationConfirmed, setLocationConfirmed] = useState(false);
   const [socket, setSocket] = useState(null);
   const [localMouse, setLocalMouse] = useState({ x: 50.0, y: 50.0 });
   const remoteCursorRef = useRef({ x: 50.0, y: 50.0 });
@@ -372,6 +377,7 @@ function App() {
   const [selectedMedia, setSelectedMedia] = useState(null); 
   const [currentSessionId, setCurrentSessionId] = useState(null); // MASTER SESSION TRACKING
   const [isPatientBroadcasting, setIsPatientBroadcasting] = useState(false); // Global sync for broadcast status
+  const [broadcastRequestStatus, setBroadcastRequestStatus] = useState('IDLE'); // 'IDLE' | 'PENDING' | 'ACTIVE' | 'REJECTED'
 
   // ADDED: QUICK-LINK SUPPORT (Check URL for ?role=surgeon/patient/admin)
   useEffect(() => {
@@ -413,10 +419,6 @@ function App() {
     setTimeout(() => setFlashMessage(null), 2500);
   };
 
-  // Real-time locations
-  const [localLocation, setLocalLocation] = useState('');
-  const [remoteLocation, setRemoteLocation] = useState('AWAITING LINK');
-  const [locationConfirmed, setLocationConfirmed] = useState(false);
 
   // AI Implementation (Part 1)
   const [classifiedPaths, setClassifiedPaths] = useState([]);
@@ -573,6 +575,38 @@ function App() {
        
        newSocket.on('broadcast-status', (status) => {
           setIsPatientBroadcasting(status);
+       });
+
+       newSocket.on('broadcast-request', () => {
+          if (role === 'surgeon') {
+             setBroadcastRequestStatus('PENDING');
+             playSciFiSound('alert');
+             triggerFlash("🚨 PATIENT REQUESTING BROADCAST");
+          }
+       });
+
+       newSocket.on('broadcast-response', (status) => {
+          if (role === 'patient') {
+             if (status === 'ACCEPT') {
+                setBroadcastRequestStatus('ACTIVE');
+                setPatientCameraActive(true);
+                setIsPatientBroadcasting(true);
+                triggerFlash("✅ BROADCAST GRANTED");
+                playSciFiSound('engage');
+             } else {
+                setBroadcastRequestStatus('REJECTED');
+                setPatientCameraActive(false);
+                setIsPatientBroadcasting(false);
+                triggerFlash("❌ BROADCAST REJECTED BY SURGEON");
+                playSciFiSound('danger');
+             }
+          }
+       });
+
+       newSocket.on('broadcast-stop', () => {
+          setIsPatientBroadcasting(false);
+          setBroadcastRequestStatus('IDLE');
+          if (role === 'patient') setPatientCameraActive(false);
        });
 
       return () => {
@@ -1073,95 +1107,100 @@ function App() {
   if (!role) {
     return (
       <ErrorBoundary>
-        <div className="role-selector-container">
-        <div className="role-selector-card">
-          <Activity size={48} className="pulse-icon" />
-          <h1>Haptic-Q Neural Link</h1>
-          <p>Global Quantum Surgical Network • Calibrating Terminals...</p>
-          
-          <div className="location-setup" style={{marginBottom: '20px', textAlign: 'left', width: '100%', marginTop: '20px'}}>
-            <label style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px', color: 'var(--accent-cyan)', marginBottom: '8px', letterSpacing: '1px', fontWeight: 'bold'}}>
-               <span>1. ENTER TERMINAL LOCATION :</span>
-               <button type="button" onClick={handleAutoDetect} style={{background:'var(--accent-cyan)', color:'black', border:'none', padding:'4px 8px', borderRadius:'2px', cursor:'pointer', fontSize:'10px', fontWeight:'bold'}}>
-                  <Target size={10} style={{marginRight:'4px', display:'inline-block'}}/>AUTO DETECT (GPS)
-               </button>
-            </label>
-            <div style={{display: 'flex', gap: '8px', alignItems: 'stretch'}}>
-               <textarea 
-                 value={localLocation} 
-                 onChange={(e) => { setLocalLocation(e.target.value.toUpperCase()); setLocationConfirmed(false); }}
-                 disabled={locationConfirmed}
-                 placeholder="e.g. 123 CYBER STREET, ELURU, AP..."
-                 rows="3"
-                 style={{
-                   flex: 1, padding: '12px', background: 'rgba(0,0,0,0.5)', 
-                   border: '1px solid ' + (locationConfirmed ? 'var(--safe-green)' : 'var(--accent-cyan)'), 
-                   color: locationConfirmed ? 'var(--safe-green)' : 'var(--accent-cyan)', 
-                   borderRadius: '4px', letterSpacing: '0.5px', fontSize: '13px', outline: 'none',
-                   fontFamily: 'monospace', resize: 'vertical', lineHeight: '1.4'
-                 }}
-               />
-               <button 
-                 onClick={() => { if(localLocation.trim().length > 3) setLocationConfirmed(!locationConfirmed); else alert("Enter a valid location first."); }}
-                 style={{
-                   padding: '0 15px', background: locationConfirmed ? 'transparent' : 'rgba(0, 250, 154, 0.1)',
-                   border: '1px solid ' + (locationConfirmed ? 'var(--safe-green)' : 'rgba(0, 250, 154, 0.5)'),
-                   color: 'var(--safe-green)', borderRadius: '4px', cursor: 'pointer',
-                   fontWeight: 'bold', minWidth: '80px', display: 'flex', flexDirection: 'column',
-                   alignItems: 'center', justifyContent: 'center', gap: '6px', transition: '0.3s'
-                 }}
-               >
-                 <Shield size={16} />
-                 <span style={{fontSize: '10px'}}>{locationConfirmed ? 'EDIT' : 'CONFIRM'}</span>
-               </button>
-            </div>
+        <div className="role-selector-container" style={{overflow: 'hidden', height: '100vh', justifyContent: 'center', padding: '20px'}}>
+          <div className="role-header" style={{marginBottom: '30px'}}>
+             <Activity size={48} className="pulse-icon" style={{color: 'var(--accent-cyan)', marginBottom: '10px'}} />
+             <h1 style={{fontSize: '2.4rem', marginBottom: '5px'}}>Haptic-Q Neural Link</h1>
+             <p style={{fontSize: '12px', letterSpacing: '3px', opacity: 0.7}}>GLOBAL QUANTUM SURGICAL NETWORK • v2.1</p>
           </div>
 
-          <div className="role-buttons" style={{opacity: locationConfirmed ? 1 : 0.3, pointerEvents: locationConfirmed ? 'auto' : 'none', transition: '0.3s'}}>
-            <button className="role-btn surgeon" onClick={() => handleRoleSelect('surgeon')}><User size={32} /><div className="role-text"><strong>SURGEON CONSOLE</strong><span>Master Node</span></div></button>
-            <button 
-                className="role-btn admin" 
-                onClick={() => handleRoleSelect('admin')}
-                style={{
-                  flex: 1, padding: '20px', background: 'rgba(245, 158, 11, 0.05)',
-                  border: '1px solid rgba(245, 158, 11, 0.4)', borderRadius: '8px', cursor: 'pointer',
-                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', transition: '0.3s'
-                }}
-              >
-                <Shield size={32} color="#f59e0b" />
-                <div className="role-text" style={{textAlign: 'center'}}>
-                  <strong style={{display: 'block', color: '#f59e0b', fontSize: '14px'}}>HOSPITAL ADMIN</strong>
-                  <span style={{fontSize: '10px', color: 'rgba(255,255,255,0.5)'}}>Audit & Records Central</span>
+          <div className="gateway-grid" style={{gap: '20px', maxWidth: '1100px'}}>
+             <div className="gateway-card surgeon" onClick={() => handleRoleSelect('surgeon')} style={{padding: '25px 20px'}}>
+                <div className="icon-shield" style={{width: '60px', height: '60px', marginBottom: '15px'}}><User size={30} /></div>
+                <h2 style={{fontSize: '1.2rem'}}>SURGEON CONSOLE</h2>
+                <p style={{fontSize: '0.8rem'}}>Master Node. Real-time haptic feedback and 3D organ simulation.</p>
+                <div style={{marginTop: '15px', fontSize: '9px', color: 'var(--accent-cyan)', fontWeight: 'bold'}}>AUTHORIZATION REQUIRED</div>
+             </div>
+
+             <div className="gateway-card admin" onClick={() => handleRoleSelect('admin')} style={{padding: '25px 20px'}}>
+                <div className="icon-shield" style={{width: '60px', height: '60px', marginBottom: '15px'}}><Shield size={30} /></div>
+                <h2 style={{fontSize: '1.2rem'}}>HOSPITAL ADMIN</h2>
+                <p style={{fontSize: '0.8rem'}}>Central Audit & Repository. Access live vitals and surgical snapshots.</p>
+                <div style={{marginTop: '15px', fontSize: '9px', color: '#f59e0b', fontWeight: 'bold'}}>READ-ONLY ACCESS</div>
+             </div>
+
+             <div className="gateway-card patient" onClick={() => handleRoleSelect('patient')} style={{padding: '25px 20px'}}>
+                <div className="icon-shield" style={{width: '60px', height: '60px', marginBottom: '15px'}}><Monitor size={30} /></div>
+                <h2 style={{fontSize: '1.2rem'}}>PATIENT TERMINAL</h2>
+                <p style={{fontSize: '0.8rem'}}>Remote Slave. Neural relay for telemetry and live-stream broadcast.</p>
+                <div style={{marginTop: '15px', fontSize: '9px', color: '#00fa9a', fontWeight: 'bold'}}>NEURAL LINK READY</div>
+             </div>
+          </div>
+
+          <div className="location-bar-premium" style={{marginTop: '40px', maxWidth: '1100px', display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '30px', background: 'transparent', border: 'none', backdropFilter: 'none', padding: 0}}>
+             {/* 1. LOCATION SETUP */}
+             <div style={{background: 'rgba(0,0,0,0.4)', padding: '20px', borderRadius: '12px', border: '1px solid rgba(0,243,255,0.2)'}}>
+                <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px'}}>
+                   <span style={{fontSize: '10px', color: 'var(--accent-cyan)', letterSpacing: '2px', fontWeight: 'bold'}}>1. ESTABLISH ORIGIN</span>
+                   <button className="cyber-button-small" onClick={handleAutoDetect} style={{fontSize: '9px', background: 'rgba(0, 229, 255, 0.1)'}}>
+                      <Navigation size={10} style={{marginRight: '5px'}}/> AUTO-DETECT
+                   </button>
                 </div>
-              </button>
-            <button className="role-btn patient" onClick={() => handleRoleSelect('patient')}><Monitor size={32} /><div className="role-text"><strong>PATIENT TERMINAL</strong><span>Remote Slave</span></div></button>
-          </div>
-
-          <div className="private-join-portal" style={{marginTop: '25px', borderTop: '1px solid rgba(0, 243, 255, 0.2)', paddingTop: '15px', width: '100%', textAlign: 'left'}}>
-             <h3 style={{fontSize: '10px', color: 'var(--accent-cyan)', marginBottom: '10px', letterSpacing: '2px', fontWeight: 'bold'}}>
-                <Lock size={12} style={{marginRight: '8px'}}/> 2. DIRECT PRIVATE LINK ACCESS
-             </h3>
-             <div style={{display: 'flex', gap: '10px', alignItems: 'center'}}>
-                <input 
-                   value={tempRoomId}
-                   onChange={(e) => setTempRoomId(e.target.value.toUpperCase())}
-                   placeholder="ENTER ROOM CODE..."
-                   style={{
-                     flex: 1, background: 'rgba(0, 243, 255, 0.05)', color: 'var(--accent-cyan)',
-                     border: '1px solid rgba(0, 243, 255, 0.3)', padding: '10px',
-                     fontSize: '12px', fontFamily: 'monospace', outline: 'none', borderRadius: '4px'
-                   }}
-                />
-                <div style={{display: 'flex', flexDirection: 'column', gap: '5px'}}>
-                   <button onClick={() => handlePortalJoin('patient')} className="cyber-button-small" style={{fontSize: '9px', width: '110px', background: 'var(--accent-cyan)', color: '#000'}}>JOIN PATIENT</button>
-                   <button onClick={() => handlePortalJoin('surgeon')} className="cyber-button-small" style={{fontSize: '9px', width: '110px', borderColor: 'rgba(0, 243, 255, 0.4)'}}>JOIN SURGEON</button>
+                <div style={{display: 'flex', gap: '10px'}}>
+                   <textarea 
+                     value={localLocation} 
+                     onChange={(e) => { setLocalLocation(e.target.value.toUpperCase()); setLocationConfirmed(false); }}
+                     placeholder="LOCATION ADDRESS..."
+                     rows="1"
+                     style={{
+                       flex: 1, background: 'rgba(0,0,0,0.6)', border: '1px solid ' + (locationConfirmed ? 'var(--safe-green)' : 'rgba(255,255,255,0.1)'),
+                       color: locationConfirmed ? 'var(--safe-green)' : '#fff', borderRadius: '4px', padding: '10px', fontSize: '11px', fontFamily: 'monospace', outline: 'none', resize: 'none'
+                     }}
+                   />
+                   <button 
+                     onClick={() => setLocationConfirmed(!locationConfirmed)}
+                     style={{
+                       padding: '0 15px', background: locationConfirmed ? 'var(--safe-green)' : 'transparent',
+                       border: '1px solid var(--safe-green)', color: locationConfirmed ? '#000' : 'var(--safe-green)',
+                       borderRadius: '4px', cursor: 'pointer', fontWeight: '900', fontSize: '10px'
+                     }}
+                   >
+                     {locationConfirmed ? 'LOCKED' : 'CONFIRM'}
+                   </button>
                 </div>
              </div>
-             <p style={{fontSize: '8px', opacity: 0.4, marginTop: '8px'}}>Enter a shared code to bypass discovery and enter an isolated tunnel.</p>
+
+             {/* 2. PRIVATE ROOM SETUP */}
+             <div style={{background: 'rgba(0,243,255,0.03)', padding: '20px', borderRadius: '12px', border: '1px solid rgba(0,243,255,0.2)'}}>
+                <div style={{fontSize: '10px', color: 'var(--accent-cyan)', marginBottom: '12px', letterSpacing: '2px', fontWeight: 'bold'}}>
+                   <Lock size={12} style={{marginRight: '8px', verticalAlign: 'middle'}}/> 2. PRIVATE LINK ACCESS
+                </div>
+                <div style={{display: 'flex', gap: '10px'}}>
+                   <input 
+                      value={tempRoomId}
+                      onChange={(e) => setTempRoomId(e.target.value.toUpperCase())}
+                      placeholder="ENTER ROOM CODE..."
+                      style={{
+                        flex: 1, background: 'rgba(0,0,0,0.6)', color: 'var(--accent-cyan)',
+                        border: '1px solid rgba(0,243,255,0.3)', padding: '10px',
+                        fontSize: '11px', fontFamily: 'monospace', outline: 'none', borderRadius: '4px'
+                      }}
+                   />
+                   <div style={{display: 'flex', gap: '5px'}}>
+                      <button onClick={() => handlePortalJoin('patient')} className="cyber-button-small" style={{fontSize: '9px', padding: '0 12px', background: 'var(--accent-cyan)', color: '#000', border: 'none'}}>PATIENT</button>
+                      <button onClick={() => handlePortalJoin('surgeon')} className="cyber-button-small" style={{fontSize: '9px', padding: '0 12px', borderColor: 'rgba(0,243,255,0.4)', background: 'transparent'}}>SURGEON</button>
+                   </div>
+                </div>
+             </div>
+          </div>
+
+          <div style={{marginTop: '25px', display: 'flex', gap: '40px', alignItems: 'center', opacity: 0.4}}>
+             <div style={{display: 'flex', alignItems: 'center', gap: '10px', fontSize: '9px'}}><Lock size={12} /> <span>SSL-GATEWAY</span></div>
+             <div style={{display: 'flex', alignItems: 'center', gap: '10px', fontSize: '9px'}}><Zap size={12} /> <span>AES-256 SYNC</span></div>
+             <div style={{display: 'flex', alignItems: 'center', gap: '10px', fontSize: '9px'}}><Activity size={12} /> <span>QKD ENABLED</span></div>
           </div>
         </div>
-      </div>
-     </ErrorBoundary>
+      </ErrorBoundary>
     );
   }
 
@@ -1187,7 +1226,16 @@ function App() {
             <div className="brand"><Shield size={24} color="#f59e0b" /> <div>HAPTIC-Q MEDICAL AUDIT HUB</div></div>
             <div className="status-indicators">
                <div className="status-pill warn" style={{borderColor: '#f59e0b', color: '#f59e0b'}}><div className="dot" style={{background: '#f59e0b'}}></div><span>SYSTEM: MASTER AUDIT [ONLINE]</span></div>
-               <button className="cyber-button-small" style={{borderColor: '#f59e0b', color: '#f59e0b'}} onClick={() => window.location.reload()}>LOGOUT</button>
+               <button 
+                 className="cyber-button-small" 
+                 style={{
+                   borderColor: '#ff4444', color: '#ff4444', background: 'rgba(255, 68, 68, 0.05)',
+                   display: 'flex', alignItems: 'center', gap: '6px', height: '32px', padding: '0 12px', fontSize: '10px'
+                 }} 
+                 onClick={() => window.location.reload()}
+               >
+                 <LogOut size={14} /> LOGOUT
+               </button>
             </div>
           </header>
 
@@ -1302,7 +1350,7 @@ function App() {
              )}
 
              {/* MIDDLE ROW: 3 panels side by side */}
-             <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px', flexShrink: 0}}>
+             <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1.2fr', gap: '20px', flexShrink: 0}}>
                <section className="panel-section" style={{background: 'rgba(0,0,0,0.5)', border: '1px solid rgba(0, 250, 154, 0.2)', padding:'15px', borderRadius:'8px'}}>
                   <h3 className="panel-title" style={{color: '#00fa9a', borderBottom:'1px solid rgba(0, 250, 154, 0.1)', paddingBottom:'5px', marginBottom:'10px'}}><Activity size={14} /> LIVE VITALS HISTORY (HR)</h3>
                   <div style={{height:'100px', width:'100%'}}>
@@ -1316,8 +1364,8 @@ function App() {
                <section className="panel-section" style={{background: 'rgba(0,0,0,0.5)', border: '1px solid #f59e0b', padding:'15px', borderRadius:'8px'}}>
                   <h3 className="panel-title" style={{color: '#f59e0b', borderBottom:'1px solid rgba(245, 158, 11, 0.1)', paddingBottom:'5px', marginBottom:'10px'}}><Monitor size={14} /> ACTIVE SESSION HUB</h3>
                   <div className="console-log" style={{height: '100px', fontSize:'11px'}}>
-                     <div className="log-entry" style={{color: '#00fa9a'}}> [OK] LINKING MASTER (SURGEON) ... </div>
-                     <div className="log-entry"> [OK] SYNCING SLAVE (PATIENT) ... </div>
+                     <div className="log-entry" style={{color: '#00fa9a'}}> [OK] QKD CHANNEL ESTABLISHED </div>
+                     <div className="log-entry"> [OK] WAVEFUNCTION SYNC: 100% </div>
                      <div className="log-entry" style={{color: '#f59e0b'}}> [WRN] SLIGHT JITTER ON NEURAL BUS </div>
                   </div>
                </section>
@@ -1332,6 +1380,20 @@ function App() {
                   <div style={{marginTop: '10px', fontSize:'11px'}}>
                      <div className="metric-row"><span>QBER (Error Rate)</span><span style={{color: '#00fa9a'}}>0.4%</span></div>
                      <div className="metric-row"><span>SYNC RECOVERY</span><span>FAST</span></div>
+                  </div>
+               </section>
+
+               <section className="panel-section quantum-special" style={{background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.1)', padding:'15px', borderRadius:'8px', color: '#fff'}}>
+                  <h3 className="panel-title" style={{color: '#fff', display: 'flex', alignItems: 'center', gap: '8px'}}><Server size={14} className="pulse"/> QUANTUM RELAY MESH</h3>
+                  <div style={{fontSize: '9px', display: 'flex', flexDirection: 'column', gap: '6px'}}>
+                     <div className="metric-row"><span>QUBIT CLUSTER STATUS</span><span style={{color: '#00fa9a'}}>1024 NODES ONLINE</span></div>
+                     <div className="metric-row"><span>ZERO-G LATENCY</span><span>0.0003ms</span></div>
+                     <div className="metric-row"><span>ENTROPY GRADIENT</span><span>STABLE (0.008)</span></div>
+                     <div className="metric-row"><span>QKD KEY ROTATION</span><span>90ms</span></div>
+                     <div style={{marginTop: '8px', padding: '5px', background: 'rgba(0, 250, 154, 0.1)', border: '1px solid rgba(0, 250, 154, 0.2)', borderRadius: '4px', textAlign: 'center'}}>
+                        <div style={{fontSize: '7px', color: '#00fa9a', fontWeight: 'bold'}}>QUANTUM ADVANTAGE: ENABLED</div>
+                        <div style={{fontSize: '6px', opacity: 0.5}}>3.4x Faster than Traditional Fiber</div>
+                     </div>
                   </div>
                </section>
              </div>
@@ -1390,6 +1452,19 @@ function App() {
                 <span className="qkd-label"><Network size={12}/> PRIVATE ROOM</span>
                 <span className="key-stream font-mono" style={{color: '#00fa9a'}}>{roomId}</span>
              </div>
+             <div className="qkd-stream-box" style={{marginLeft: '15px', borderLeft: '1px solid rgba(0, 243, 255, 0.2)', paddingLeft: '15px', minWidth: '130px'}}>
+                <span className="qkd-label"><Shield size={12}/> ENTANGLEMENT MATRIX</span>
+                <div style={{display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '10px', marginTop: '2px'}}>
+                   <div style={{display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '2px'}}>
+                      <span style={{opacity: 0.6}}>COORD X</span>
+                      <span style={{color: 'var(--accent-cyan)', fontFamily: 'monospace', fontWeight: 'bold'}}>{(localMouse.x).toFixed(2)}</span>
+                   </div>
+                   <div style={{display: 'flex', justifyContent: 'space-between'}}>
+                      <span style={{opacity: 0.6}}>COORD Y</span>
+                      <span style={{color: 'var(--accent-cyan)', fontFamily: 'monospace', fontWeight: 'bold'}}>{(localMouse.y).toFixed(2)}</span>
+                   </div>
+                </div>
+             </div>
              <div className="qber-mini-graph">
                 <span className="qkd-label">QBER</span>
                 <span className={`qber-val ${isCompromised ? 'risk' : 'safe'}`}>{qber.toFixed(2)}%</span>
@@ -1413,6 +1488,17 @@ function App() {
              </>
            )}
            <div className="status-pill safe"><div className="dot"></div><span>LINK: 100%</span></div>
+           <button 
+             className="cyber-button-small" 
+             style={{
+               marginLeft: '15px', color: '#ff4444', borderColor: '#ff4444',
+               background: 'rgba(255, 68, 68, 0.05)', display: 'flex', alignItems: 'center', gap: '6px',
+               padding: '0 12px', height: '32px', fontWeight: 'bold', fontSize: '10px'
+             }} 
+             onClick={() => window.location.reload()}
+           >
+             <LogOut size={14} /> LOGOUT
+           </button>
         </div>
       </header>
 
@@ -1589,10 +1675,14 @@ function App() {
                   )}
               </div>
 
-              <div className="panel-section">
-                <h3 className="panel-title"><Activity size={12} /> Link Status</h3>
-                <div style={{color:'var(--safe-green)', fontSize:'10px', fontFamily:'monospace'}}>● ENCRYPTED NEURAL CHANNEL</div>
-                <div style={{color:'rgba(255,255,255,0.4)', fontSize:'9px', marginTop:'4px'}}>LATENCY: {latency}ms | QKD ACTIVE</div>
+              <div className="panel-section" style={{border: '1px solid rgba(0, 250, 154, 0.3)', background: 'rgba(0, 250, 154, 0.03)'}}>
+                <h3 className="panel-title" style={{color: '#00fa9a', display: 'flex', alignItems: 'center', gap: '8px'}}><Zap size={14} className="pulse"/> QUANTUM NEURAL RELAY</h3>
+                <div style={{fontSize: '9px', color: 'var(--safe-green)', display: 'flex', flexDirection: 'column', gap: '4px'}}>
+                  <div style={{display: 'flex', justifyContent: 'space-between'}}><span>QUBIT COHERENCE</span><span>99.98%</span></div>
+                  <div style={{display: 'flex', justifyContent: 'space-between'}}><span>TELEPORTATION LAG</span><span>{latency}ns</span></div>
+                  <div style={{display: 'flex', justifyContent: 'space-between', color: 'var(--accent-cyan)'}}><span>SYNC STATE</span><span>SUPERPOSITION OPTIMIZED</span></div>
+                  <div style={{marginTop: '4px', fontStyle: 'italic', opacity: 0.6, fontSize: '8px'}}>RELAYING VIA ZERO-G QUANTUM SATELLITE</div>
+                </div>
               </div>
             </div>
           </aside>
@@ -1651,10 +1741,21 @@ function App() {
                                alert('Browser Security Block: Camera access requires "localhost" or an HTTPS connection (or Chrome flags).');
                                return;
                             }
-                             const newState = !patientCameraActive;
-                             setPatientCameraActive(newState);
-                             setIsPatientBroadcasting(newState); // Local update
-                             if (socket) socket.emit('broadcast-status', newState);
+                            if (patientCameraActive || isPatientBroadcasting) {
+                               // STOPPING the current stream
+                               setPatientCameraActive(false);
+                               setIsPatientBroadcasting(false);
+                               setBroadcastRequestStatus('IDLE');
+                               if (socket) {
+                                  socket.emit('broadcast-status', false);
+                                  socket.emit('broadcast-stop');
+                               }
+                            } else {
+                               // REQUESTING a new stream
+                               setBroadcastRequestStatus('PENDING');
+                               triggerFlash("⏳ WAITING FOR SURGEON APPROVAL...");
+                               if (socket) socket.emit('broadcast-request');
+                            }
                           }} />
                          <span className="slider" style={{background: patientCameraActive ? '#ff3366' : 'var(--bg-panel)'}}></span>
                        </label>
@@ -1721,7 +1822,7 @@ function App() {
                  </Canvas>
                  )}
                  
-                 {!selectedOrgan && systemState === 'IDLE' && (
+                 {!selectedOrgan && systemState === 'IDLE' && role !== 'surgeon' && (
                     <div className="pulse" style={{position:'absolute', top:'50%', left:'50%', transform:'translate(-50%,-50%)', color:'var(--safe-green)', fontFamily:'monospace', textAlign:'center', opacity:0.7, width: '80%'}}>
                        <Activity size={48} style={{marginBottom:'15px', color:'var(--safe-green)'}}/>
                        <div style={{fontSize: '18px', fontWeight: 'bold', letterSpacing: '2px'}}>PATIENT TERMINAL READY</div>
@@ -1845,14 +1946,16 @@ function App() {
 
         {role === 'surgeon' && (
           <aside className="right-panel">
-            <div className="panel-section">
-              <h3 className="panel-title"><Shield size={14} /> Entanglement Matrix</h3>
-              <div className="matrix-content" style={{display: 'flex', flexDirection: 'column', gap: '8px'}}>
-                 <div className="metric-row"><span>COORD X</span><span className="metric-value">{localMouse.x.toFixed(2)}</span></div>
-                 <div className="metric-row"><span>COORD Y</span><span className="metric-value">{localMouse.y.toFixed(2)}</span></div>
-              </div>
+            <div className="panel-section quantum-special" style={{border: '1px solid rgba(0, 243, 255, 0.4)', background: 'rgba(0, 243, 255, 0.05)', marginBottom: '15px'}}>
+               <h3 className="panel-title" style={{color: 'var(--accent-cyan)', display: 'flex', alignItems: 'center', gap: '8px'}}><Zap size={14} className="pulse"/> QUANTUM SYNC ENGINE</h3>
+               <div style={{fontSize: '9px', display: 'flex', flexDirection: 'column', gap: '5px'}}>
+                  <div className="metric-row"><span>WAVEFUNCTION FIDELITY</span><span style={{color: '#00fa9a'}}>0.99988</span></div>
+                  <div className="metric-row"><span>SUPERPOSITION OPTIMIZATION</span><span style={{color: 'var(--accent-cyan)'}}>ACTIVE</span></div>
+                  <div className="metric-row"><span>ENTANGLEMENT DECOHERENCE</span><span style={{color: '#ff4444'}}>0.0042%</span></div>
+                  <div style={{marginTop: '5px', height: '2px', background: 'rgba(0, 243, 255, 0.2)', width: '100%'}}><div style={{height: '100%', width: '94%', background: 'var(--accent-cyan)'}}></div></div>
+                  <div style={{fontSize: '7px', opacity: 0.5, textAlign: 'center'}}>QUANTUM CHANNEL STABILITY: ELITE</div>
+               </div>
             </div>
-            
             <div className="panel-section">
               <h3 className="panel-title"><BrainCircuit size={14} /> AI Risk Classifier</h3>
               <div className="path-classification-list">
@@ -1889,6 +1992,50 @@ function App() {
             <div className="hud-flash-alert pulse">
                <div className="hud-flash-inner">
                   <Zap size={16} /> <span>{flashMessage}</span>
+               </div>
+            </div>
+          )}
+
+          {/* BROADCAST APPROVAL DIALOG */}
+          {broadcastRequestStatus === 'PENDING' && (
+            <div className="hud-flash-alert" style={{background: 'rgba(0,0,0,0.95)', border: '2px solid var(--accent-cyan)', top: '40%', height: 'auto', padding: '30px'}}>
+               <div style={{textAlign: 'center', width: '100%'}}>
+                  <div className="pulse" style={{color: 'var(--accent-cyan)', fontSize: '20px', fontWeight: 'bold', letterSpacing: '2px', marginBottom: '20px'}}>
+                     <Camera size={24} style={{verticalAlign: 'middle', marginRight: '10px'}}/> 
+                     LIVE BROADCAST REQUEST
+                  </div>
+                  <div style={{color: '#fff', fontSize: '13px', opacity: 0.8, marginBottom: '25px'}}>
+                     PATIENT IS ATTEMPTING TO STREAM LIVE WEBCAM FEED.<br/>
+                     DURING BROADCAST, TARGET SELECTION WILL BE LOCKED.
+                  </div>
+                  <div style={{display: 'flex', gap: '20px', justifyContent: 'center'}}>
+                     <button 
+                        className="cyber-button-small" 
+                        style={{background: 'rgba(0, 250, 154, 0.2)', color: '#00fa9a', borderColor: '#00fa9a', padding: '12px 25px', fontSize: '12px'}}
+                        onClick={() => {
+                           setBroadcastRequestStatus('ACTIVE');
+                           setIsPatientBroadcasting(true);
+                           if (socket) {
+                              socket.emit('broadcast-response', 'ACCEPT');
+                              socket.emit('broadcast-status', true);
+                           }
+                           playSciFiSound('engage');
+                        }}
+                     >
+                        <CheckCircle2 size={16} /> ACCEPT FEED
+                     </button>
+                     <button 
+                        className="cyber-button-small risk-btn" 
+                        style={{padding: '12px 25px', fontSize: '12px'}}
+                        onClick={() => {
+                           setBroadcastRequestStatus('IDLE');
+                           if (socket) socket.emit('broadcast-response', 'REJECT');
+                           playSciFiSound('danger');
+                        }}
+                     >
+                        <X size={16} /> REJECT REQUEST
+                     </button>
+                  </div>
                </div>
             </div>
           )}

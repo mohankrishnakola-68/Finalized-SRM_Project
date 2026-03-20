@@ -150,6 +150,18 @@ io.on('connection', (socket) => {
         socket.to(socket.currentRoom).emit('broadcast-status', status);
     });
 
+    socket.on('broadcast-request', () => {
+        socket.to(socket.currentRoom).emit('broadcast-request');
+    });
+
+    socket.on('broadcast-response', (status) => {
+        socket.to(socket.currentRoom).emit('broadcast-response', status);
+    });
+
+    socket.on('broadcast-stop', () => {
+        socket.to(socket.currentRoom).emit('broadcast-stop');
+    });
+
     socket.on('vitals-update', async (vitals) => {
         const vitalsLog = { ...vitals, timestamp: new Date() };
         db.get('telemetry').push(vitalsLog).write();
