@@ -1107,46 +1107,46 @@ function App() {
   if (!role) {
     return (
       <ErrorBoundary>
-        <div className="role-selector-container" style={{overflow: 'hidden', height: '100vh', justifyContent: 'center', padding: '20px'}}>
-          <div className="role-header" style={{marginBottom: '30px'}}>
-             <Activity size={48} className="pulse-icon" style={{color: 'var(--accent-cyan)', marginBottom: '10px'}} />
-             <h1 style={{fontSize: '2.4rem', marginBottom: '5px'}}>Haptic-Q Neural Link</h1>
-             <p style={{fontSize: '12px', letterSpacing: '3px', opacity: 0.7}}>GLOBAL QUANTUM SURGICAL NETWORK • v2.1</p>
+        <div className="role-selector-container" style={{overflowY: 'auto', height: '100vh', justifyContent: 'center', padding: '10px 20px'}}>
+          <div className="role-header" style={{marginBottom: '15px'}}>
+             <Activity size={40} className="pulse-icon" style={{color: 'var(--accent-cyan)', marginBottom: '5px'}} />
+             <h1 style={{fontSize: '2.1rem', marginBottom: '2px'}}>Haptic-Q Neural Link</h1>
+             <p style={{fontSize: '11px', letterSpacing: '2.5px', opacity: 0.7}}>GLOBAL QUANTUM SURGICAL NETWORK • v2.1</p>
           </div>
 
-          <div className="gateway-grid" style={{gap: '20px', maxWidth: '1100px'}}>
-             <div className="gateway-card surgeon" onClick={() => handleRoleSelect('surgeon')} style={{padding: '25px 20px'}}>
-                <div className="icon-shield" style={{width: '60px', height: '60px', marginBottom: '15px'}}><User size={30} /></div>
-                <h2 style={{fontSize: '1.2rem'}}>SURGEON CONSOLE</h2>
-                <p style={{fontSize: '0.8rem'}}>Master Node. Real-time haptic feedback and 3D organ simulation.</p>
-                <div style={{marginTop: '15px', fontSize: '9px', color: 'var(--accent-cyan)', fontWeight: 'bold'}}>AUTHORIZATION REQUIRED</div>
+          <div className="gateway-grid" style={{gap: '15px', maxWidth: '1000px'}}>
+             <div className="gateway-card surgeon" onClick={() => handleRoleSelect('surgeon')} style={{padding: '18px 15px'}}>
+                <div className="icon-shield" style={{width: '50px', height: '50px', marginBottom: '10px'}}><User size={24} /></div>
+                <h2 style={{fontSize: '1.1rem'}}>SURGEON CONSOLE</h2>
+                <p style={{fontSize: '0.75rem'}}>Master Node. Real-time haptic feedback and 3D organ simulation.</p>
+                <div style={{marginTop: '10px', fontSize: '8px', color: 'var(--accent-cyan)', fontWeight: 'bold'}}>AUTHORIZATION REQUIRED</div>
              </div>
 
-             <div className="gateway-card admin" onClick={() => handleRoleSelect('admin')} style={{padding: '25px 20px'}}>
-                <div className="icon-shield" style={{width: '60px', height: '60px', marginBottom: '15px'}}><Shield size={30} /></div>
-                <h2 style={{fontSize: '1.2rem'}}>HOSPITAL ADMIN</h2>
-                <p style={{fontSize: '0.8rem'}}>Central Audit & Repository. Access live vitals and surgical snapshots.</p>
-                <div style={{marginTop: '15px', fontSize: '9px', color: '#f59e0b', fontWeight: 'bold'}}>READ-ONLY ACCESS</div>
+             <div className="gateway-card admin" onClick={() => handleRoleSelect('admin')} style={{padding: '18px 15px'}}>
+                <div className="icon-shield" style={{width: '50px', height: '50px', marginBottom: '10px'}}><Shield size={24} /></div>
+                <h2 style={{fontSize: '1.1rem'}}>HOSPITAL ADMIN</h2>
+                <p style={{fontSize: '0.75rem'}}>Central Audit & Repository. Access live vitals and surgical snapshots.</p>
+                <div style={{marginTop: '10px', fontSize: '8px', color: '#f59e0b', fontWeight: 'bold'}}>READ-ONLY ACCESS</div>
              </div>
 
-             <div className="gateway-card patient" onClick={() => handleRoleSelect('patient')} style={{padding: '25px 20px'}}>
-                <div className="icon-shield" style={{width: '60px', height: '60px', marginBottom: '15px'}}><Monitor size={30} /></div>
-                <h2 style={{fontSize: '1.2rem'}}>PATIENT TERMINAL</h2>
-                <p style={{fontSize: '0.8rem'}}>Remote Slave. Neural relay for telemetry and live-stream broadcast.</p>
-                <div style={{marginTop: '15px', fontSize: '9px', color: '#00fa9a', fontWeight: 'bold'}}>NEURAL LINK READY</div>
+             <div className="gateway-card patient" onClick={() => handleRoleSelect('patient')} style={{padding: '18px 15px'}}>
+                <div className="icon-shield" style={{width: '50px', height: '50px', marginBottom: '10px'}}><Monitor size={24} /></div>
+                <h2 style={{fontSize: '1.1rem'}}>PATIENT TERMINAL</h2>
+                <p style={{fontSize: '0.75rem'}}>Remote Slave. Neural relay for telemetry and live-stream broadcast.</p>
+                <div style={{marginTop: '10px', fontSize: '8px', color: '#00fa9a', fontWeight: 'bold'}}>NEURAL LINK READY</div>
              </div>
           </div>
 
-          <div className="location-bar-premium" style={{marginTop: '40px', maxWidth: '1100px', display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '30px', background: 'transparent', border: 'none', backdropFilter: 'none', padding: 0}}>
+          <div className="location-bar-premium" style={{marginTop: '20px', maxWidth: '1000px', display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '20px', background: 'transparent', border: 'none', backdropFilter: 'none', padding: 0}}>
              {/* 1. LOCATION SETUP */}
-             <div style={{background: 'rgba(0,0,0,0.4)', padding: '20px', borderRadius: '12px', border: '1px solid rgba(0,243,255,0.2)'}}>
-                <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px'}}>
-                   <span style={{fontSize: '10px', color: 'var(--accent-cyan)', letterSpacing: '2px', fontWeight: 'bold'}}>1. ESTABLISH ORIGIN</span>
-                   <button className="cyber-button-small" onClick={handleAutoDetect} style={{fontSize: '9px', background: 'rgba(0, 229, 255, 0.1)'}}>
+             <div style={{background: 'rgba(0,0,0,0.4)', padding: '15px', borderRadius: '12px', border: '1px solid rgba(0,243,255,0.2)'}}>
+                <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px'}}>
+                   <span style={{fontSize: '9px', color: 'var(--accent-cyan)', letterSpacing: '2px', fontWeight: 'bold'}}>1. ESTABLISH ORIGIN</span>
+                   <button className="cyber-button-small" onClick={handleAutoDetect} style={{fontSize: '8px', padding: '4px 8px', background: 'rgba(0, 229, 255, 0.1)'}}>
                       <Navigation size={10} style={{marginRight: '5px'}}/> AUTO-DETECT
                    </button>
                 </div>
-                <div style={{display: 'flex', gap: '10px'}}>
+                <div style={{display: 'flex', gap: '8px'}}>
                    <textarea 
                      value={localLocation} 
                      onChange={(e) => { setLocalLocation(e.target.value.toUpperCase()); setLocationConfirmed(false); }}
@@ -1154,15 +1154,15 @@ function App() {
                      rows="1"
                      style={{
                        flex: 1, background: 'rgba(0,0,0,0.6)', border: '1px solid ' + (locationConfirmed ? 'var(--safe-green)' : 'rgba(255,255,255,0.1)'),
-                       color: locationConfirmed ? 'var(--safe-green)' : '#fff', borderRadius: '4px', padding: '10px', fontSize: '11px', fontFamily: 'monospace', outline: 'none', resize: 'none'
+                       color: locationConfirmed ? 'var(--safe-green)' : '#fff', borderRadius: '4px', padding: '8px', fontSize: '10px', fontFamily: 'monospace', outline: 'none', resize: 'none'
                      }}
                    />
                    <button 
                      onClick={() => setLocationConfirmed(!locationConfirmed)}
                      style={{
-                       padding: '0 15px', background: locationConfirmed ? 'var(--safe-green)' : 'transparent',
+                       padding: '0 12px', background: locationConfirmed ? 'var(--safe-green)' : 'transparent',
                        border: '1px solid var(--safe-green)', color: locationConfirmed ? '#000' : 'var(--safe-green)',
-                       borderRadius: '4px', cursor: 'pointer', fontWeight: '900', fontSize: '10px'
+                       borderRadius: '4px', cursor: 'pointer', fontWeight: '900', fontSize: '9px'
                      }}
                    >
                      {locationConfirmed ? 'LOCKED' : 'CONFIRM'}
@@ -1171,34 +1171,35 @@ function App() {
              </div>
 
              {/* 2. PRIVATE ROOM SETUP */}
-             <div style={{background: 'rgba(0,243,255,0.03)', padding: '20px', borderRadius: '12px', border: '1px solid rgba(0,243,255,0.2)'}}>
-                <div style={{fontSize: '10px', color: 'var(--accent-cyan)', marginBottom: '12px', letterSpacing: '2px', fontWeight: 'bold'}}>
+             <div style={{background: 'rgba(0,243,255,0.03)', padding: '15px', borderRadius: '12px', border: '1px solid rgba(0,243,255,0.2)'}}>
+                <div style={{fontSize: '9px', color: 'var(--accent-cyan)', marginBottom: '10px', letterSpacing: '2px', fontWeight: 'bold'}}>
                    <Lock size={12} style={{marginRight: '8px', verticalAlign: 'middle'}}/> 2. PRIVATE LINK ACCESS
                 </div>
-                <div style={{display: 'flex', gap: '10px'}}>
+                <div style={{display: 'flex', gap: '8px'}}>
                    <input 
                       value={tempRoomId}
                       onChange={(e) => setTempRoomId(e.target.value.toUpperCase())}
                       placeholder="ENTER ROOM CODE..."
                       style={{
                         flex: 1, background: 'rgba(0,0,0,0.6)', color: 'var(--accent-cyan)',
-                        border: '1px solid rgba(0,243,255,0.3)', padding: '10px',
-                        fontSize: '11px', fontFamily: 'monospace', outline: 'none', borderRadius: '4px'
+                        border: '1px solid rgba(0,243,255,0.3)', padding: '8px',
+                        fontSize: '10px', fontFamily: 'monospace', outline: 'none', borderRadius: '4px'
                       }}
                    />
                    <div style={{display: 'flex', gap: '5px'}}>
-                      <button onClick={() => handlePortalJoin('patient')} className="cyber-button-small" style={{fontSize: '9px', padding: '0 12px', background: 'var(--accent-cyan)', color: '#000', border: 'none'}}>PATIENT</button>
-                      <button onClick={() => handlePortalJoin('surgeon')} className="cyber-button-small" style={{fontSize: '9px', padding: '0 12px', borderColor: 'rgba(0,243,255,0.4)', background: 'transparent'}}>SURGEON</button>
+                      <button onClick={() => handlePortalJoin('patient')} className="cyber-button-small" style={{fontSize: '8px', padding: '0 10px', background: 'var(--accent-cyan)', color: '#000', border: 'none'}}>PATIENT</button>
+                      <button onClick={() => handlePortalJoin('surgeon')} className="cyber-button-small" style={{fontSize: '8px', padding: '0 10px', borderColor: 'rgba(0,243,255,0.4)', background: 'transparent'}}>SURGEON</button>
                    </div>
                 </div>
              </div>
           </div>
 
-          <div style={{marginTop: '25px', display: 'flex', gap: '40px', alignItems: 'center', opacity: 0.4}}>
-             <div style={{display: 'flex', alignItems: 'center', gap: '10px', fontSize: '9px'}}><Lock size={12} /> <span>SSL-GATEWAY</span></div>
-             <div style={{display: 'flex', alignItems: 'center', gap: '10px', fontSize: '9px'}}><Zap size={12} /> <span>AES-256 SYNC</span></div>
-             <div style={{display: 'flex', alignItems: 'center', gap: '10px', fontSize: '9px'}}><Activity size={12} /> <span>QKD ENABLED</span></div>
+          <div style={{marginTop: '15px', display: 'flex', gap: '30px', alignItems: 'center', opacity: 0.4}}>
+             <div style={{display: 'flex', alignItems: 'center', gap: '8px', fontSize: '8px'}}><Lock size={10} /> <span>SSL-GATEWAY</span></div>
+             <div style={{display: 'flex', alignItems: 'center', gap: '8px', fontSize: '8px'}}><Zap size={10} /> <span>AES-256 SYNC</span></div>
+             <div style={{display: 'flex', alignItems: 'center', gap: '8px', fontSize: '8px'}}><Activity size={10} /> <span>QKD ENABLED</span></div>
           </div>
+
         </div>
       </ErrorBoundary>
     );
