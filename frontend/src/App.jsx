@@ -544,6 +544,7 @@ function App() {
           setDetectionZones(data.detectionZones || []);
           setClassifiedPaths(data.classifiedPaths || []);
           setVitals(data.vitals || vitals);
+          if (data.isCompromised !== undefined) setIsCompromised(data.isCompromised);
         }
       });
 
@@ -663,14 +664,14 @@ function App() {
   // Broadcast full session state from Surgeon console (Master Node)
   useEffect(() => {
      if (role === 'surgeon' && socket) {
-        const sessionPayload = { selectedOrgan, systemState, aiVisionOverlay, detectionZones, classifiedPaths, vitals };
+        const sessionPayload = { selectedOrgan, systemState, aiVisionOverlay, detectionZones, classifiedPaths, vitals, isCompromised };
         socket.emit('session-sync', sessionPayload);
         const beat = setInterval(() => {
            socket.emit('session-sync', sessionPayload);
         }, 3000); // Pulse state every 3 sec for robustness
         return () => clearInterval(beat);
      }
-  }, [role, socket, selectedOrgan, systemState, aiVisionOverlay, detectionZones, classifiedPaths, vitals]);
+  }, [role, socket, selectedOrgan, systemState, aiVisionOverlay, detectionZones, classifiedPaths, vitals, isCompromised]);
 
   // Fetch real-time IP Location
   // Broadcast Location
@@ -744,11 +745,28 @@ function App() {
     setQkdStatus('COMPROMISED');
     setQuantumKey('LOCKED_OUT');
     addLog('ALERT: Network intercept detected by Sentinel AI.', 'risk');
+    
+    // IMMEDIATE Neural Broadcast (No heartbeat delay)
+    if (socket) {
+      socket.emit('session-sync', { 
+        selectedOrgan, systemState, aiVisionOverlay, 
+        detectionZones, classifiedPaths, vitals, isCompromised: true 
+      });
+    }
+
     setTimeout(() => {
       setIsCompromised(false);
       setQber(0.85);
       setQkdStatus('SECURE [NEW KEY]');
       addLog('Quantum Fail-Safe: Key rotation complete.', 'success');
+      
+      // Sync the recovery immediately too
+      if (socket) {
+        socket.emit('session-sync', { 
+          selectedOrgan, systemState, aiVisionOverlay, 
+          detectionZones, classifiedPaths, vitals, isCompromised: false 
+        });
+      }
     }, 4000);
   };
 
