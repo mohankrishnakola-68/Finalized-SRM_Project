@@ -146,6 +146,10 @@ io.on('connection', (socket) => {
         } catch(e) {}
     });
 
+    socket.on('broadcast-status', (status) => {
+        socket.to(socket.currentRoom).emit('broadcast-status', status);
+    });
+
     socket.on('vitals-update', async (vitals) => {
         const vitalsLog = { ...vitals, timestamp: new Date() };
         db.get('telemetry').push(vitalsLog).write();
