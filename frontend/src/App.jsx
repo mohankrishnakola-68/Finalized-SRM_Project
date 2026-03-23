@@ -1448,64 +1448,60 @@ function App() {
     <ErrorBoundary>
       <div className={`dashboard-container ${role === 'patient' ? 'patient-mode' : ''} ${isCompromised ? 'danger-amber' : ''}`}>
       <header className="top-bar">
-        <div className="brand"><Activity size={24} className="highlight" /> <div>HAPTIC-Q {role.toUpperCase()}</div></div>
+        <div className="brand" style={{minWidth: '200px'}}>
+           <Activity size={24} className="highlight" /> 
+           <div style={{fontSize: '18px', fontWeight: '900', letterSpacing: '2px'}}>HAPTIC-Q <span style={{color: 'var(--accent-cyan)'}}>SURGEON</span></div>
+        </div>
         
         {role === 'surgeon' && (
-          <div className={`qkd-top-widget ${isCompromised ? 'glitch-active' : ''}`}>
-             <div className="qkd-stream-box">
-                <span className="qkd-label"><Lock size={12}/> QKD KEY STREAM</span>
-                <span className="key-stream font-mono">{quantumKey}</span>
+          <div className="neural-link-ribbon">
+             <div className="ribbon-box">
+                <Lock size={12} className="ribbon-icon"/>
+                <span className="ribbon-label">QKD STREAM:</span>
+                <span className="ribbon-value">{quantumKey.substring(0, 10)}...</span>
              </div>
-             <div className="qkd-stream-box" style={{marginLeft: '15px', borderLeft: '1px solid rgba(0, 243, 255, 0.2)', paddingLeft: '15px'}}>
-                <span className="qkd-label"><Network size={12}/> PRIVATE ROOM</span>
-                <span className="key-stream font-mono" style={{color: '#00fa9a'}}>{roomId}</span>
+             <div className="ribbon-box">
+                <Network size={12} className="ribbon-icon"/>
+                <span className="ribbon-label">NODE:</span>
+                <span className="ribbon-value" style={{color: '#00fa9a'}}>{roomId}</span>
              </div>
-             <div className="qkd-stream-box" style={{marginLeft: '15px', borderLeft: '1px solid rgba(0, 243, 255, 0.2)', paddingLeft: '15px', minWidth: '130px'}}>
-                <span className="qkd-label"><Shield size={12}/> ENTANGLEMENT MATRIX</span>
-                <div style={{display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '10px', marginTop: '2px'}}>
-                   <div style={{display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '2px'}}>
-                      <span style={{opacity: 0.6}}>COORD X</span>
-                      <span style={{color: 'var(--accent-cyan)', fontFamily: 'monospace', fontWeight: 'bold'}}>{(localMouse.x).toFixed(2)}</span>
-                   </div>
-                   <div style={{display: 'flex', justifyContent: 'space-between'}}>
-                      <span style={{opacity: 0.6}}>COORD Y</span>
-                      <span style={{color: 'var(--accent-cyan)', fontFamily: 'monospace', fontWeight: 'bold'}}>{(localMouse.y).toFixed(2)}</span>
-                   </div>
-                </div>
+             <div className="ribbon-box">
+                <Target size={12} className="ribbon-icon"/>
+                <span className="ribbon-label">COORDS:</span>
+                <span className="ribbon-value">X:{localMouse.x.toFixed(0)} Y:{localMouse.y.toFixed(0)}</span>
              </div>
-             <div className="qber-mini-graph">
-                <span className="qkd-label">QBER</span>
-                <span className={`qber-val ${isCompromised ? 'risk' : 'safe'}`}>{qber.toFixed(2)}%</span>
+             <div className="ribbon-box">
+                <Shield size={12} className={`ribbon-icon ${isCompromised ? 'pulse-red' : ''}`}/>
+                <span className="ribbon-label">QBER:</span>
+                <span className={`ribbon-value ${isCompromised ? 'risk' : 'safe'}`}>{qber.toFixed(2)}%</span>
              </div>
           </div>
         )}
 
-        <div className="location-tag" style={{display: 'flex', gap: '8px', fontSize: '10px', alignItems: 'center', maxWidth: '500px', overflow: 'hidden', whiteSpace: 'nowrap'}}>
-           <Network size={14} style={{flexShrink: 0}} /> 
-           <span style={{color: 'var(--accent-cyan)', overflow: 'hidden', textOverflow: 'ellipsis'}}>MSTR: {role === 'surgeon' ? localLocation.replace('\n', ' ') : remoteLocation.replace('\n', ' ')}</span>
-           <span style={{opacity: 0.3}}>|</span>
-           <span style={{color: 'var(--safe-green)', overflow: 'hidden', textOverflow: 'ellipsis'}}>SLV: {role === 'patient' ? localLocation.replace('\n', ' ') : remoteLocation.replace('\n', ' ')}</span>
+        <div className="location-hub">
+           <div className="hub-segment">
+              <span className="hub-label">MASTER (SURGEON)</span>
+              <span className="hub-value">{localLocation}</span>
+           </div>
+           <div className="hub-divider"></div>
+           <div className="hub-segment">
+              <span className="hub-label">SLAVE (ROBOT)</span>
+              <span className="hub-value">{remoteLocation}</span>
+           </div>
         </div>
-        <div className="status-indicators">
+
+        <div className="header-actions">
            {role === 'surgeon' && (
-             <>
-               <button className="cyber-button-small" style={{borderColor: 'var(--accent-cyan)', color: 'var(--accent-cyan)', display: 'flex', alignItems: 'center', gap: '4px'}} onClick={copyPatientLink}>
-                 <Share2 size={12} /> SHARE LINK
-               </button>
-               <button className="cyber-button-small risk-btn" onClick={simulateIntercept}>SIMULATE ATTACK</button>
-             </>
+              <button className="action-btn share" onClick={copyPatientLink}>
+                <Share2 size={14} /> SHARE
+              </button>
            )}
-           <div className="status-pill safe"><div className="dot"></div><span>LINK: 100%</span></div>
-           <button 
-             className="cyber-button-small" 
-             style={{
-               marginLeft: '15px', color: '#ff4444', borderColor: '#ff4444',
-               background: 'rgba(255, 68, 68, 0.05)', display: 'flex', alignItems: 'center', gap: '6px',
-               padding: '0 12px', height: '32px', fontWeight: 'bold', fontSize: '10px'
-             }} 
-             onClick={() => window.location.reload()}
-           >
-             <LogOut size={14} /> LOGOUT
+           <div className="status-indicator">
+              <div className="dot"></div>
+              <span>SYNC: 100%</span>
+           </div>
+           <button className="exit-btn" onClick={() => window.location.reload()}>
+              <LogOut size={16} /> EXIT
            </button>
         </div>
       </header>
@@ -1513,15 +1509,10 @@ function App() {
       <div className="main-content">
         {role === 'surgeon' && (
           <aside className="side-panel">
-            {/* Pinned Sections (Fixed) */}
-            <div className="panel-section" style={{ opacity: (selectedOrgan && !isPatientBroadcasting) ? 1 : 0.3, pointerEvents: (selectedOrgan && !isPatientBroadcasting) ? 'auto' : 'none', transition: '0.4s', filter: (selectedOrgan && !isPatientBroadcasting) ? 'none' : 'grayscale(1)' }}>
-              <h3 className="panel-title"><Cpu size={14} /> 1. MASTER CONTROLS</h3>
-              <button className={`cyber-button ${systemState !== 'IDLE' ? 'disabled' : ''}`} onClick={runSimulationWorkflow} disabled={systemState !== 'IDLE' || !selectedOrgan || isPatientBroadcasting}>1. INITIALIZE SCAN</button>
-            </div>
-
-            <div className="panel-section" style={{ border: isPatientBroadcasting ? '1px solid #ff3366' : (selectedOrgan ? '1px solid var(--safe-green)' : '1px solid var(--accent-cyan)'), transition: '0.4s', boxShadow: selectedOrgan ? 'none' : '0 0 15px rgba(0, 229, 255, 0.2)', opacity: 1 }}>
+            {/* STEP 1: ANATOMICAL TARGET */}
+            <div className="panel-section" style={{ border: isPatientBroadcasting ? '2px solid #ff3366' : (selectedOrgan ? '1px solid var(--safe-green)' : '1px solid var(--accent-cyan)'), transition: '0.4s', boxShadow: selectedOrgan ? 'none' : '0 0 15px rgba(0, 229, 255, 0.2)' }}>
               <h3 className="panel-title" style={{ color: isPatientBroadcasting ? '#ff3366' : (selectedOrgan ? 'var(--safe-green)' : 'var(--accent-cyan)') }}>
-                <Target size={14} /> 2. SET ANATOMICAL TARGET
+                <Target size={14} /> 1. SET ANATOMICAL TARGET
                 {isPatientBroadcasting && <span className="pulse" style={{fontSize: '8px', color: '#ff3366', marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '4px'}}><div style={{width: '6px', height: '6px', background: '#ff3366', borderRadius: '50%'}}></div> BROADCAST ACTIVE</span>}
               </h3>
               <select 
@@ -1531,8 +1522,7 @@ function App() {
                 style={{
                   width: '100%', background: 'rgba(0,0,0,0.6)', color: isPatientBroadcasting ? '#fff' : 'var(--accent-cyan)',
                   border: isPatientBroadcasting ? '1px solid #ff3366' : '1px solid var(--accent-cyan)', padding: '10px',
-                  borderRadius: '4px', fontFamily: 'monospace', outline: 'none', cursor: isPatientBroadcasting ? 'not-allowed' : 'pointer',
-                  marginBottom: isPatientBroadcasting ? '10px' : '0'
+                  borderRadius: '4px', fontFamily: 'monospace', outline: 'none', cursor: isPatientBroadcasting ? 'not-allowed' : 'pointer'
                 }}
               >
                 <option value="">{isPatientBroadcasting ? '-- BLOCKED BY BROADCAST --' : '-- SELECT TARGET --'}</option>
@@ -1543,28 +1533,35 @@ function App() {
                 <option value="Hand">METACARPAL (Hand)</option>
               </select>
               {isPatientBroadcasting && (
-                <div style={{display: 'flex', flexDirection: 'column', gap: '8px'}}>
-                  <div style={{fontSize: '9px', color: '#ff3366', textAlign: 'center', fontWeight: 'bold'}}>
-                    ⚠️ MANUAL OVERRIDE DISABLED
-                  </div>
-                  <button 
-                    className="cyber-button-small risk-btn" 
-                    onClick={() => {
-                        if (socket) {
-                           socket.emit('broadcast-stop');
-                           socket.emit('broadcast-status', false);
-                        }
-                        setIsPatientBroadcasting(false);
-                        setBroadcastRequestStatus('IDLE');
-                        setShowLiveStream(false);
-                        playSciFiSound('danger');
-                    }}
-                    style={{width: '100%', padding: '10px', fontSize: '10px'}}
-                  >
-                    <X size={14} /> DISCONNECT LIVE BROADCAST
-                  </button>
-                </div>
+                <button 
+                  className="cyber-button-small risk-btn" 
+                  onClick={() => {
+                      if (socket) {
+                         socket.emit('broadcast-stop');
+                         socket.emit('broadcast-status', false);
+                      }
+                      setIsPatientBroadcasting(false);
+                      setBroadcastRequestStatus('IDLE');
+                      setShowLiveStream(false);
+                      playSciFiSound('danger');
+                  }}
+                  style={{width: '100%', padding: '10px', fontSize: '10px', marginTop: '10px'}}
+                >
+                  <X size={14} /> FORCED DISCONNECT
+                </button>
               )}
+            </div>
+
+            {/* STEP 2: MASTER CONTROLS */}
+            <div className="panel-section" style={{ opacity: (selectedOrgan && !isPatientBroadcasting) ? 1 : 0.3, pointerEvents: (selectedOrgan && !isPatientBroadcasting) ? 'auto' : 'none', transition: '0.4s' }}>
+              <h3 className="panel-title"><Cpu size={14} /> 2. MASTER CONTROLS</h3>
+              <button 
+                className={`cyber-button ${systemState !== 'IDLE' ? 'disabled' : ''}`} 
+                onClick={runSimulationWorkflow} 
+                disabled={systemState !== 'IDLE' || !selectedOrgan || isPatientBroadcasting}
+              >
+                2. INITIALIZE NEURAL SCAN
+              </button>
             </div>
 
             {/* Scrollable Auxiliary Sections */}
