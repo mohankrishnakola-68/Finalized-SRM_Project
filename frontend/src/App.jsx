@@ -339,9 +339,13 @@ function App() {
 
   // SURGEON AUTH & PROFILE STATE
   const [doctorId, setDoctorId] = useState('');
-  const [patientId, setPatientId] = useState('');
   const [doctorPhoto, setDoctorPhoto] = useState('https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?auto=format&fit=crop&w=150&q=80');
   const [isDoctorVerified, setIsDoctorVerified] = useState(false);
+
+  // PATIENT AUTH & PROFILE STATE
+  const [patientId, setPatientId] = useState('');
+  const [patientPhoto, setPatientPhoto] = useState('https://images.unsplash.com/photo-1551601651-2a8555f1a141?auto=format&fit=crop&w=150&q=80');
+  const [isPatientVerified, setIsPatientVerified] = useState(false);
 
   const handleManualJoin = () => {
     if (!tempRoomId.trim()) return;
@@ -387,7 +391,7 @@ function App() {
 
   const handleSurgeonAuth = async (e) => {
     e.preventDefault();
-    if (!doctorId || !patientId) return alert("Doctor ID and Patient ID are required.");
+    if (!doctorId) return alert("Doctor ID is required.");
     setIsDoctorVerified(true);
     triggerFlash(`✅ DOCTOR ${doctorId} VERIFIED`);
     playSciFiSound('engage');
@@ -396,7 +400,6 @@ function App() {
     try {
       const { data, error } = await supabase.from('surgical_sessions').insert([{
          doctor_id: doctorId,
-         patient_id: patientId,
          doctor_photo: doctorPhoto,
          start_time: new Date().toISOString(),
          status: 'ACTIVE'
@@ -580,7 +583,15 @@ function App() {
       newSocket.on('location-update', (data) => {
         if (data.role !== role) {
           setRemoteLocation(data.location);
-          if (data.role === 'patient') setIsPatientBroadcasting(data.broadcastStatus);
+          if (data.role === 'patient') {
+             setIsPatientBroadcasting(data.broadcastStatus);
+             if (data.userId) setPatientId(data.userId);
+             if (data.userPhoto) setPatientPhoto(data.userPhoto);
+          }
+          if (data.role === 'surgeon') {
+             if (data.userId) setDoctorId(data.userId);
+             if (data.userPhoto) setDoctorPhoto(data.userPhoto);
+          }
         }
       });
 
@@ -750,14 +761,20 @@ function App() {
   // Broadcast Location
   useEffect(() => {
     if (socket && (localLocation || role === 'patient')) {
-      const payload = { role, location: localLocation, broadcastStatus: patientCameraActive };
+      const payload = { 
+        role, 
+        location: localLocation, 
+        broadcastStatus: patientCameraActive,
+        userId: role === 'surgeon' ? doctorId : patientId,
+        userPhoto: role === 'surgeon' ? doctorPhoto : patientPhoto
+      };
       socket.emit('location-sync', payload);
       const interval = setInterval(() => {
         socket.emit('location-sync', { ...payload, broadcastStatus: patientCameraActive });
       }, 1000);
       return () => clearInterval(interval);
     }
-  }, [socket, localLocation, role]);
+  }, [socket, localLocation, role, patientCameraActive, doctorId, patientId, doctorPhoto, patientPhoto]);
 
   const addLog = (msg, type='info') => {
     const time = new Date().toLocaleTimeString();
@@ -1483,15 +1500,29 @@ function App() {
                  <label style={{display:'block', fontSize:'10px', color:'var(--safe-green)', marginBottom:'5px'}}>DOCTOR ID *</label>
                  <input required value={doctorId} onChange={e=>setDoctorId(e.target.value)} style={{width:'100%', padding:'10px', background:'rgba(0,0,0,0.5)', border:'1px solid rgba(0,250,154,0.3)', color:'#fff', outline:'none'}} placeholder="e.g. DR-8492" />
                </div>
+               <div style={{marginBottom:'25px'}}>
+                 <label style={{display:'block', fontSize:'10px', color:'var(--safe-green)', marginBottom:'5px'}}>PROFILE PHOTO URL</label>
+                 <input value={doctorPhoto} onChange={e=>setDoctorPhoto(e.target.value)} style={{width:'100%', padding:'10px', background:'rgba(0,0,0,0.5)', border:'1px solid rgba(0,250,154,0.3)', color:'#fff', outline:'none'}} placeholder="Image URL..." />
+               </div>
+               <button type="submit" className="cyber-button" style={{padding:'15px', fontSize:'14px', background:'var(--safe-green)', color:'#000'}}>AUTHENTICATE & ENTER COCKPIT</button>
+            </form>
+          </div>
+        )}
+
+        {/* PATIENT AUTHENTICATION OVERLAY */}
+        {role === 'patient' && !isPatientVerified && (
+          <div style={{position:'fixed', top:0, left:0, width:'100vw', height:'100vh', background:'rgba(0,0,0,0.95)', zIndex:9999, display:'flex', alignItems:'center', justifyContent:'center'}}>
+            <form onSubmit={(e) => { e.preventDefault(); if(patientId) { setIsPatientVerified(true); playSciFiSound('engage'); triggerFlash(`✅ PATIENT ${patientId} REGISTERED`); } }} style={{width:'400px', background:'#1a2744', padding:'30px', border:'1px solid rgba(34,197,94,0.5)', borderRadius:'12px', boxShadow:'0 0 50px rgba(34,197,94,0.2)'}}>
+               <h2 style={{color:'var(--safe-green)', textAlign:'center', letterSpacing:'2px', marginBottom:'20px'}}><Shield size={24} style={{verticalAlign:'middle'}}/> NEURAL SYNC LOGIN</h2>
                <div style={{marginBottom:'15px'}}>
                  <label style={{display:'block', fontSize:'10px', color:'var(--safe-green)', marginBottom:'5px'}}>PATIENT ID *</label>
                  <input required value={patientId} onChange={e=>setPatientId(e.target.value)} style={{width:'100%', padding:'10px', background:'rgba(0,0,0,0.5)', border:'1px solid rgba(0,250,154,0.3)', color:'#fff', outline:'none'}} placeholder="e.g. PT-1004" />
                </div>
                <div style={{marginBottom:'25px'}}>
                  <label style={{display:'block', fontSize:'10px', color:'var(--safe-green)', marginBottom:'5px'}}>PROFILE PHOTO URL</label>
-                 <input value={doctorPhoto} onChange={e=>setDoctorPhoto(e.target.value)} style={{width:'100%', padding:'10px', background:'rgba(0,0,0,0.5)', border:'1px solid rgba(0,250,154,0.3)', color:'#fff', outline:'none'}} placeholder="Image URL..." />
+                 <input value={patientPhoto} onChange={e=>setPatientPhoto(e.target.value)} style={{width:'100%', padding:'10px', background:'rgba(0,0,0,0.5)', border:'1px solid rgba(0,250,154,0.3)', color:'#fff', outline:'none'}} placeholder="Image URL..." />
                </div>
-               <button type="submit" className="cyber-button" style={{padding:'15px', fontSize:'14px', background:'var(--safe-green)', color:'#000'}}>AUTHENTICATE & ENTER COCKPIT</button>
+               <button type="submit" className="cyber-button" style={{padding:'15px', fontSize:'14px', background:'var(--safe-green)', color:'#000'}}>ACCESS SECURE FEED</button>
             </form>
           </div>
         )}
@@ -1539,14 +1570,14 @@ function App() {
         {/* COL 3 — LOCATION HUB (full name, no truncation) */}
         <div className="intelligence-hub">
            <div className="registry-row" style={{display: 'flex', gap: '8px', alignItems: 'center'}}>
-              <img src={role === 'surgeon' ? "https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?auto=format&fit=crop&q=80&w=100&h=100" : "https://images.unsplash.com/photo-1551601651-2a8555f1a141?auto=format&fit=crop&q=80&w=100&h=100"} alt="Local" style={{width: '28px', height: '28px', borderRadius: '4px', objectFit: 'cover', border: '1px solid rgba(56,189,248,0.5)'}} />
+              <img src={role === 'surgeon' ? doctorPhoto : patientPhoto} alt="Local" style={{width: '28px', height: '28px', borderRadius: '4px', objectFit: 'cover', border: '1px solid rgba(56,189,248,0.5)'}} />
               <div className="registry-item" style={{flex: 1}}>
                  <span className="registry-label">{role === 'surgeon' ? 'MASTER TERMINAL (LOCAL)' : 'PATIENT TERMINAL (LOCAL)'}</span>
                  <span className="registry-value">{localLocation}</span>
               </div>
            </div>
            <div className="registry-row" style={{display: 'flex', gap: '8px', alignItems: 'center'}}>
-              <img src={role === 'surgeon' ? "https://images.unsplash.com/photo-1551601651-2a8555f1a141?auto=format&fit=crop&q=80&w=100&h=100" : "https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?auto=format&fit=crop&q=80&w=100&h=100"} alt="Remote" style={{width: '28px', height: '28px', borderRadius: '4px', objectFit: 'cover', border: '1px solid rgba(34,197,94,0.3)'}} />
+              <img src={role === 'surgeon' ? patientPhoto : doctorPhoto} alt="Remote" style={{width: '28px', height: '28px', borderRadius: '4px', objectFit: 'cover', border: '1px solid rgba(34,197,94,0.3)'}} />
               <div className="registry-item" style={{borderColor: 'rgba(34, 197, 94, 0.25)', flex: 1}}>
                  <span className="registry-label">{role === 'surgeon' ? 'REMOTELY LINKED SLAVE' : 'LINKED MASTER NODE'}</span>
                  <span className="registry-value" style={{color: '#22c55e'}}>{remoteLocation || '— AWAITING CONNECTION —'}</span>
