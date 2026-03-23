@@ -559,10 +559,17 @@ function App() {
       });
 
       newSocket.on('audio-packet', (blob) => {
+        // Ensure AudioContext is resumed (Browser Security requirement)
+        getAudioContext(); 
+        
         const audioBlob = new Blob([blob], { type: 'audio/webm' });
         const audioUrl = URL.createObjectURL(audioBlob);
         const audio = new Audio(audioUrl);
-        audio.play().catch(e => console.log('Audio Blocked:', e));
+        audio.play().catch(e => {
+           console.log('Audio Blocked - Interaction Required:', e);
+           // Fallback: trigger a flash so the user knows they need to click somewhere
+           triggerFlash("🔊 INCOMING VOICE (CLICK TO UNMUTE)");
+        });
         setRemoteTalking(true);
         setTimeout(() => setRemoteTalking(false), 2000);
       });
@@ -1662,7 +1669,7 @@ function App() {
                   />
                   <button 
                     className={`confirm-btn ${locationConfirmed ? 'confirmed' : ''}`} 
-                    onClick={() => setLocationConfirmed(!locationConfirmed)}
+                    onClick={() => { setLocationConfirmed(!locationConfirmed); getAudioContext(); }}
                     style={{background: locationConfirmed ? '#00fa9a' : 'transparent', border:'1px solid #00fa9a', color: locationConfirmed ? '#000' : '#00fa9a', padding:'0 10px', borderRadius:'4px'}}
                   >
                     {locationConfirmed ? <X size={16}/> : <Check size={16}/>}
