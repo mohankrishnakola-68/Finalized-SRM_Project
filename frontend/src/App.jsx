@@ -337,6 +337,12 @@ function App() {
   const [roomId, setRoomId] = useState('LOBBY');
   const [tempRoomId, setTempRoomId] = useState('');
 
+  // SURGEON AUTH & PROFILE STATE
+  const [doctorId, setDoctorId] = useState('');
+  const [patientId, setPatientId] = useState('');
+  const [doctorPhoto, setDoctorPhoto] = useState('https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?auto=format&fit=crop&w=150&q=80');
+  const [isDoctorVerified, setIsDoctorVerified] = useState(false);
+
   const handleManualJoin = () => {
     if (!tempRoomId.trim()) return;
     setRoomId(tempRoomId.trim());
@@ -378,6 +384,26 @@ function App() {
   const [currentSessionId, setCurrentSessionId] = useState(null); // MASTER SESSION TRACKING
   const [isPatientBroadcasting, setIsPatientBroadcasting] = useState(false); // Global sync for broadcast status
   const [broadcastRequestStatus, setBroadcastRequestStatus] = useState('IDLE'); // 'IDLE' | 'PENDING' | 'ACTIVE' | 'REJECTED'
+
+  const handleSurgeonAuth = async (e) => {
+    e.preventDefault();
+    if (!doctorId || !patientId) return alert("Doctor ID and Patient ID are required.");
+    setIsDoctorVerified(true);
+    triggerFlash(`✅ DOCTOR ${doctorId} VERIFIED`);
+    playSciFiSound('engage');
+    
+    // Save to database
+    try {
+      const { data, error } = await supabase.from('surgical_sessions').insert([{
+         doctor_id: doctorId,
+         patient_id: patientId,
+         doctor_photo: doctorPhoto,
+         start_time: new Date().toISOString(),
+         status: 'ACTIVE'
+      }]).select().single();
+      if (data) setCurrentSessionId(data.id);
+    } catch (err) { console.error("DB Error:", err); }
+  };
 
   // ADDED: QUICK-LINK SUPPORT (Check URL for ?role=surgeon/patient/admin)
   useEffect(() => {
@@ -1447,204 +1473,285 @@ function App() {
   return (
     <ErrorBoundary>
       <div className={`dashboard-container ${role === 'patient' ? 'patient-mode' : ''} ${isCompromised ? 'danger-amber' : ''}`}>
-      <header className="top-bar">
-        <div className="brand" style={{minWidth: '200px'}}>
-           <Activity size={24} className="highlight" /> 
-           <div style={{fontSize: '18px', fontWeight: '900', letterSpacing: '2px'}}>HAPTIC-Q <span style={{color: 'var(--accent-cyan)'}}>SURGEON</span></div>
-        </div>
         
-        {role === 'surgeon' && (
-          <div className="neural-link-ribbon">
-             <div className="ribbon-box">
-                <Lock size={12} className="ribbon-icon"/>
-                <span className="ribbon-label">QKD STREAM:</span>
-                <span className="ribbon-value">{quantumKey.substring(0, 10)}...</span>
-             </div>
-             <div className="ribbon-box">
-                <Network size={12} className="ribbon-icon"/>
-                <span className="ribbon-label">NODE:</span>
-                <span className="ribbon-value" style={{color: '#00fa9a'}}>{roomId}</span>
-             </div>
-             <div className="ribbon-box">
-                <Target size={12} className="ribbon-icon"/>
-                <span className="ribbon-label">COORDS:</span>
-                <span className="ribbon-value">X:{localMouse.x.toFixed(0)} Y:{localMouse.y.toFixed(0)}</span>
-             </div>
-             <div className="ribbon-box">
-                <Shield size={12} className={`ribbon-icon ${isCompromised ? 'pulse-red' : ''}`}/>
-                <span className="ribbon-label">QBER:</span>
-                <span className={`ribbon-value ${isCompromised ? 'risk' : 'safe'}`}>{qber.toFixed(2)}%</span>
-             </div>
+        {/* DOCTOR AUTHENTICATION OVERLAY */}
+        {role === 'surgeon' && !isDoctorVerified && (
+          <div style={{position:'fixed', top:0, left:0, width:'100vw', height:'100vh', background:'rgba(0,0,0,0.95)', zIndex:9999, display:'flex', alignItems:'center', justifyContent:'center'}}>
+            <form onSubmit={handleSurgeonAuth} style={{width:'400px', background:'#1a2744', padding:'30px', border:'1px solid var(--accent-cyan)', borderRadius:'12px', boxShadow:'0 0 50px rgba(0, 229, 255, 0.2)'}}>
+               <h2 style={{color:'var(--accent-cyan)', textAlign:'center', letterSpacing:'2px', marginBottom:'20px'}}><Shield size={24} style={{verticalAlign:'middle'}}/> SURGEON VERIFICATION</h2>
+               <div style={{marginBottom:'15px'}}>
+                 <label style={{display:'block', fontSize:'10px', color:'var(--safe-green)', marginBottom:'5px'}}>DOCTOR ID *</label>
+                 <input required value={doctorId} onChange={e=>setDoctorId(e.target.value)} style={{width:'100%', padding:'10px', background:'rgba(0,0,0,0.5)', border:'1px solid rgba(0,250,154,0.3)', color:'#fff', outline:'none'}} placeholder="e.g. DR-8492" />
+               </div>
+               <div style={{marginBottom:'15px'}}>
+                 <label style={{display:'block', fontSize:'10px', color:'var(--safe-green)', marginBottom:'5px'}}>PATIENT ID *</label>
+                 <input required value={patientId} onChange={e=>setPatientId(e.target.value)} style={{width:'100%', padding:'10px', background:'rgba(0,0,0,0.5)', border:'1px solid rgba(0,250,154,0.3)', color:'#fff', outline:'none'}} placeholder="e.g. PT-1004" />
+               </div>
+               <div style={{marginBottom:'25px'}}>
+                 <label style={{display:'block', fontSize:'10px', color:'var(--safe-green)', marginBottom:'5px'}}>PROFILE PHOTO URL</label>
+                 <input value={doctorPhoto} onChange={e=>setDoctorPhoto(e.target.value)} style={{width:'100%', padding:'10px', background:'rgba(0,0,0,0.5)', border:'1px solid rgba(0,250,154,0.3)', color:'#fff', outline:'none'}} placeholder="Image URL..." />
+               </div>
+               <button type="submit" className="cyber-button" style={{padding:'15px', fontSize:'14px', background:'var(--safe-green)', color:'#000'}}>AUTHENTICATE & ENTER COCKPIT</button>
+            </form>
           </div>
         )}
 
-        <div className="location-hub">
-           <div className="hub-segment">
-              <span className="hub-label">MASTER (SURGEON)</span>
-              <span className="hub-value">{localLocation}</span>
-           </div>
-           <div className="hub-divider"></div>
-           <div className="hub-segment">
-              <span className="hub-label">SLAVE (ROBOT)</span>
-              <span className="hub-value">{remoteLocation}</span>
+      <header className="top-bar">
+
+        {/* COL 1 — BRAND */}
+        <div className="brand-clinical">
+           <Activity size={26} style={{color: '#38bdf8', flexShrink: 0}} />
+           <div>
+              <h1>HAPTIC-Q</h1>
+              <div style={{fontSize: '8px', color: 'var(--text-muted)', letterSpacing: '1.5px', fontWeight: '700', textTransform: 'uppercase'}}>Surgical Telemedicine OS</div>
            </div>
         </div>
 
-        <div className="header-actions">
-           {role === 'surgeon' && (
-              <button className="action-btn share" onClick={copyPatientLink}>
-                <Share2 size={14} /> SHARE
-              </button>
-           )}
-           <div className="status-indicator">
-              <div className="dot"></div>
-              <span>SYNC: 100%</span>
+        {/* COL 2 — QUANTUM TELEMETRY BLOCK (restored) */}
+        {role === 'surgeon' && (
+          <div style={{display: 'flex', gap: '6px', height: '65px', alignItems: 'stretch', width: '380px', overflow: 'hidden'}}>
+            {/* QKD Key Stream */}
+            <div className="q-block" style={{flex: '2'}}>
+              <span className="q-block-label"><Lock size={9}/> QKD KEY STREAM</span>
+              <span className="q-block-value mono">{quantumKey.substring(0, 14)}…</span>
+            </div>
+            {/* Private Room */}
+            <div className="q-block" style={{flex: '1.5'}}>
+              <span className="q-block-label"><Network size={9}/> PRIVATE ROOM</span>
+              <span className="q-block-value" style={{color: '#22c55e'}}>{roomId}</span>
+            </div>
+            {/* Coordinates */}
+            <div className="q-block" style={{flex: '1.5'}}>
+              <span className="q-block-label"><Target size={9}/> COORDINATES</span>
+              <div style={{display: 'flex', flexDirection: 'column', gap: '1px', marginTop: '2px'}}>
+                <span className="q-block-value mono" style={{fontSize: '10px'}}>X: {localMouse.x.toFixed(1)}</span>
+                <span className="q-block-value mono" style={{fontSize: '10px'}}>Y: {localMouse.y.toFixed(1)}</span>
+              </div>
+            </div>
+            {/* QBER */}
+            <div className="q-block" style={{flex: '1', borderColor: isCompromised ? 'rgba(239,68,68,0.4)' : 'rgba(56,189,248,0.12)'}}>
+              <span className="q-block-label"><Shield size={9}/> QBER</span>
+              <span className="q-block-value" style={{color: isCompromised ? '#ef4444' : '#22c55e', fontSize: '14px', fontWeight: '900'}}>{qber.toFixed(2)}%</span>
+            </div>
+          </div>
+        )}
+
+        {/* COL 3 — LOCATION HUB (full name, no truncation) */}
+        <div className="intelligence-hub">
+           <div className="registry-row" style={{display: 'flex', gap: '8px', alignItems: 'center'}}>
+              <img src={role === 'surgeon' ? "https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?auto=format&fit=crop&q=80&w=100&h=100" : "https://images.unsplash.com/photo-1551601651-2a8555f1a141?auto=format&fit=crop&q=80&w=100&h=100"} alt="Local" style={{width: '28px', height: '28px', borderRadius: '4px', objectFit: 'cover', border: '1px solid rgba(56,189,248,0.5)'}} />
+              <div className="registry-item" style={{flex: 1}}>
+                 <span className="registry-label">{role === 'surgeon' ? 'MASTER TERMINAL (LOCAL)' : 'PATIENT TERMINAL (LOCAL)'}</span>
+                 <span className="registry-value">{localLocation}</span>
+              </div>
            </div>
-           <button className="exit-btn" onClick={() => window.location.reload()}>
-              <LogOut size={16} /> EXIT
-           </button>
+           <div className="registry-row" style={{display: 'flex', gap: '8px', alignItems: 'center'}}>
+              <img src={role === 'surgeon' ? "https://images.unsplash.com/photo-1551601651-2a8555f1a141?auto=format&fit=crop&q=80&w=100&h=100" : "https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?auto=format&fit=crop&q=80&w=100&h=100"} alt="Remote" style={{width: '28px', height: '28px', borderRadius: '4px', objectFit: 'cover', border: '1px solid rgba(34,197,94,0.3)'}} />
+              <div className="registry-item" style={{borderColor: 'rgba(34, 197, 94, 0.25)', flex: 1}}>
+                 <span className="registry-label">{role === 'surgeon' ? 'REMOTELY LINKED SLAVE' : 'LINKED MASTER NODE'}</span>
+                 <span className="registry-value" style={{color: '#22c55e'}}>{remoteLocation || '— AWAITING CONNECTION —'}</span>
+              </div>
+           </div>
         </div>
+
+        {/* COL 4 — ACTIONS */}
+        <div style={{display: 'flex', flexDirection: 'column', gap: '7px', alignItems: 'flex-end', justifyContent: 'center'}}>
+           <div style={{display: 'flex', gap: '8px', alignItems: 'center'}}>
+              <div style={{display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.25)', borderRadius: '20px', padding: '4px 12px', fontSize: '10px', fontWeight: '800', color: '#22c55e'}}>
+                 <div className="dot" style={{background: '#22c55e', boxShadow: '0 0 6px #22c55e'}}></div>
+                 <span>LINK 100%</span>
+              </div>
+           </div>
+           <div style={{display: 'flex', gap: '6px'}}>
+              {role === 'surgeon' && (<>
+                 <button
+                   className="cyber-button-small"
+                   style={{background: 'rgba(56,189,248,0.1)', borderColor: '#38bdf8', color: '#38bdf8', height: '26px', fontSize: '9px', padding: '0 10px'}}
+                   onClick={copyPatientLink}
+                 >
+                   <Share2 size={11}/> SHARE LINK
+                 </button>
+                 <button
+                   className="cyber-button-small"
+                   style={{background: 'rgba(239,68,68,0.1)', borderColor: '#ef4444', color: '#ef4444', height: '26px', fontSize: '9px', padding: '0 10px'}}
+                   onClick={simulateIntercept}
+                 >
+                   SIMULATE ATTACK
+                 </button>
+              </>)}
+              <button
+                className="cyber-button-small"
+                style={{background: 'rgba(239,68,68,0.15)', borderColor: '#ef4444', color: '#ef4444', height: '26px', fontSize: '9px', padding: '0 12px', fontWeight: '800'}}
+                onClick={() => window.location.reload()}
+              >
+                <LogOut size={11}/> LOGOUT
+              </button>
+           </div>
+        </div>
+
       </header>
 
       <div className="main-content">
         {role === 'surgeon' && (
           <aside className="side-panel">
-            {/* STEP 1: ANATOMICAL TARGET */}
-            <div className="panel-section" style={{ border: isPatientBroadcasting ? '2px solid #ff3366' : (selectedOrgan ? '1px solid var(--safe-green)' : '1px solid var(--accent-cyan)'), transition: '0.4s', boxShadow: selectedOrgan ? 'none' : '0 0 15px rgba(0, 229, 255, 0.2)' }}>
-              <h3 className="panel-title" style={{ color: isPatientBroadcasting ? '#ff3366' : (selectedOrgan ? 'var(--safe-green)' : 'var(--accent-cyan)') }}>
-                <Target size={14} /> 1. SET ANATOMICAL TARGET
-                {isPatientBroadcasting && <span className="pulse" style={{fontSize: '8px', color: '#ff3366', marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '4px'}}><div style={{width: '6px', height: '6px', background: '#ff3366', borderRadius: '50%'}}></div> BROADCAST ACTIVE</span>}
+            
+            {/* ── DOCTOR PROFILE & PATIENT LINK ──────────────── */}
+            <div className="panel-section" style={{background: 'rgba(0, 243, 255, 0.03)', border: '1px solid rgba(56, 189, 248, 0.3)'}}>
+               <h3 className="panel-title"><User size={12}/> ACTIVE SESSION PROFILES</h3>
+               <div style={{display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', paddingBottom: '8px', borderBottom: '1px solid rgba(255,255,255,0.05)'}}>
+                  <img src={doctorPhoto} alt="Doctor" style={{width: '32px', height: '32px', borderRadius: '4px', border: '1px solid var(--accent-cyan)', objectFit: 'cover'}} />
+                  <div>
+                    <div style={{fontSize: '8px', color: 'var(--text-muted)'}}>ATTENDING SURGEON</div>
+                    <div style={{fontSize: '11px', color: 'var(--accent-cyan)', fontWeight: 'bold'}}>{doctorId || 'DR. UNKNOWN'}</div>
+                  </div>
+               </div>
+               <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
+                  <img src="https://images.unsplash.com/photo-1551601651-2a8555f1a141?auto=format&fit=crop&q=80&w=100&h=100" alt="Patient Remote" style={{width: '32px', height: '32px', borderRadius: '4px', border: '1px solid rgba(34,197,94,0.5)', objectFit: 'cover'}} />
+                  <div>
+                    <div style={{fontSize: '8px', color: 'var(--text-muted)'}}>REMOTELY LINKED PATIENT</div>
+                    <div style={{fontSize: '11px', color: 'var(--safe-green)', fontWeight: 'bold'}}>{patientId || 'AWAITING CONNECTION'}</div>
+                  </div>
+               </div>
+            </div>
+
+            {/* ── STEP 1: ANATOMICAL TARGET ──────────────── */}
+            <div className="panel-section" style={{
+              border: isPatientBroadcasting ? '2px solid #ef4444' : (selectedOrgan ? '1px solid #22c55e' : '1px solid #38bdf8'),
+              boxShadow: selectedOrgan ? 'none' : '0 0 12px rgba(56,189,248,0.15)'
+            }}>
+              <h3 className="panel-title" style={{ color: isPatientBroadcasting ? '#ef4444' : (selectedOrgan ? '#22c55e' : '#38bdf8') }}>
+                <Target size={12}/> 1. SET ANATOMICAL TARGET
+                {isPatientBroadcasting && <span className="pulse" style={{fontSize:'8px', color:'#ef4444', marginLeft:'auto', display:'flex', alignItems:'center', gap:'3px'}}><div style={{width:'5px',height:'5px',background:'#ef4444',borderRadius:'50%'}}></div>LIVE</span>}
               </h3>
-              <select 
-                value={selectedOrgan} 
+              <select
+                value={selectedOrgan}
                 disabled={isPatientBroadcasting}
                 onChange={(e) => { setSelectedOrgan(e.target.value); playSciFiSound('engage'); }}
-                style={{
-                  width: '100%', background: 'rgba(0,0,0,0.6)', color: isPatientBroadcasting ? '#fff' : 'var(--accent-cyan)',
-                  border: isPatientBroadcasting ? '1px solid #ff3366' : '1px solid var(--accent-cyan)', padding: '10px',
-                  borderRadius: '4px', fontFamily: 'monospace', outline: 'none', cursor: isPatientBroadcasting ? 'not-allowed' : 'pointer'
-                }}
+                style={{ width:'100%', background:'rgba(0,0,0,0.5)', color: isPatientBroadcasting ? '#fff' : '#38bdf8',
+                  border: isPatientBroadcasting ? '1px solid #ef4444' : '1px solid #38bdf8',
+                  padding:'7px 8px', borderRadius:'6px', fontFamily:'inherit', outline:'none',
+                  cursor: isPatientBroadcasting ? 'not-allowed' : 'pointer', fontSize:'11px', fontWeight:'600' }}
               >
-                <option value="">{isPatientBroadcasting ? '-- BLOCKED BY BROADCAST --' : '-- SELECT TARGET --'}</option>
-                <option value="Heart">CARDIAC (Heart)</option>
-                <option value="Brain">NEURAL (Brain)</option>
-                <option value="Spine">ORTHOPEDIC (Spine)</option>
-                <option value="Stomach">GASTRIC (Stomach) </option>
-                <option value="Hand">METACARPAL (Hand)</option>
+                <option value="">{isPatientBroadcasting ? '── BLOCKED BY BROADCAST ──' : '── SELECT ORGAN ──'}</option>
+                <option value="Heart">❤️  CARDIAC (Heart)</option>
+                <option value="Brain">🧠  NEURAL (Brain)</option>
+                <option value="Spine">🦴  ORTHOPEDIC (Spine)</option>
+                <option value="Stomach">🫁  GASTRIC (Stomach)</option>
+                <option value="Hand">✋  METACARPAL (Hand)</option>
               </select>
               {isPatientBroadcasting && (
-                <button 
-                  className="cyber-button-small risk-btn" 
-                  onClick={() => {
-                      if (socket) {
-                         socket.emit('broadcast-stop');
-                         socket.emit('broadcast-status', false);
-                      }
-                      setIsPatientBroadcasting(false);
-                      setBroadcastRequestStatus('IDLE');
-                      setShowLiveStream(false);
-                      playSciFiSound('danger');
-                  }}
-                  style={{width: '100%', padding: '10px', fontSize: '10px', marginTop: '10px'}}
-                >
-                  <X size={14} /> FORCED DISCONNECT
+                <button className="cyber-button-small risk-btn"
+                  onClick={() => { if(socket){socket.emit('broadcast-stop');socket.emit('broadcast-status',false);} setIsPatientBroadcasting(false); setBroadcastRequestStatus('IDLE'); setShowLiveStream(false); playSciFiSound('danger'); }}
+                  style={{width:'100%', padding:'6px', fontSize:'10px', marginTop:'4px', background:'rgba(239,68,68,0.15)', borderColor:'#ef4444', color:'#ef4444'}}>
+                  <X size={12}/> FORCED DISCONNECT
                 </button>
               )}
             </div>
 
-            {/* STEP 2: MASTER CONTROLS */}
-            <div className="panel-section" style={{ opacity: (selectedOrgan && !isPatientBroadcasting) ? 1 : 0.3, pointerEvents: (selectedOrgan && !isPatientBroadcasting) ? 'auto' : 'none', transition: '0.4s' }}>
-              <h3 className="panel-title"><Cpu size={14} /> 2. MASTER CONTROLS</h3>
-              <button 
-                className={`cyber-button ${systemState !== 'IDLE' ? 'disabled' : ''}`} 
-                onClick={runSimulationWorkflow} 
+            {/* ── STEP 2: MASTER CONTROLS ──────────────────── */}
+            <div className="panel-section">
+              <h3 className="panel-title"><Cpu size={12}/> 2. MASTER CONTROLS</h3>
+              <button
+                className="cyber-button"
+                onClick={runSimulationWorkflow}
                 disabled={systemState !== 'IDLE' || !selectedOrgan || isPatientBroadcasting}
+                style={{
+                  opacity: (systemState !== 'IDLE' || !selectedOrgan || isPatientBroadcasting) ? 0.35 : 1,
+                  cursor: (systemState !== 'IDLE' || !selectedOrgan || isPatientBroadcasting) ? 'not-allowed' : 'pointer'
+                }}
               >
-                2. INITIALIZE NEURAL SCAN
+                {systemState === 'IDLE' ? 'INITIALIZE NEURAL SCAN' : `SCANNING: ${systemState}…`}
               </button>
             </div>
 
-            {/* Scrollable Auxiliary Sections */}
-            <div className="scrollable-sidebar-content">
+            {/* ── SURGICAL TOOLS ─────────────────────────────── */}
+            <div className="panel-section" style={{flex: 1}}>
+              <h3 className="panel-title"><Activity size={12}/> SURGICAL TOOLS</h3>
 
-              <div className="panel-section" style={{ opacity: selectedOrgan ? 1 : 0.3, pointerEvents: selectedOrgan ? 'auto' : 'none', transition: '0.4s', filter: selectedOrgan ? 'none' : 'grayscale(1)' }}>
-                <h3 className="panel-title"><Zap size={14} /> 3. OPTIMIZED HAPTICS</h3>
-                <button 
-                  className={`cyber-button ${hapticsEngaged ? 'engaged' : ''} ${(!selectedOrgan || systemState !== 'OPTIMIZED') ? 'disabled' : ''}`} 
-                  onClick={() => { playSciFiSound('engage'); setHapticsEngaged(!hapticsEngaged); }}
-                  disabled={!selectedOrgan || systemState !== 'OPTIMIZED'}
+              {/* Haptics — full row */}
+              <button
+                className={`compact-tool-btn-row ${hapticsEngaged ? 'tool-active' : ''} ${(!selectedOrgan || systemState !== 'OPTIMIZED') ? 'tool-disabled' : ''}`}
+                onClick={() => { playSciFiSound('engage'); setHapticsEngaged(!hapticsEngaged); }}
+                disabled={!selectedOrgan || systemState !== 'OPTIMIZED'}
+              >
+                <Zap size={13}/>
+                <span>HAPTICS — {hapticsEngaged ? '● ACTIVE' : 'ENGAGE'}</span>
+              </button>
+
+              {/* Push-to-Talk — full row */}
+              <button
+                className={`compact-tool-btn-row ${isTalking ? 'tool-danger' : ''}`}
+                onMouseDown={startRecording} onMouseUp={stopRecording} onMouseLeave={stopRecording}
+              >
+                {isTalking ? <Volume2 size={13}/> : <Mic size={13}/>}
+                <span>{isTalking ? '● TRANSMITTING — RELEASE TO STOP' : 'PUSH TO TALK (NURSES)'}</span>
+              </button>
+
+              {/* Snapshot + Record — 2-col row */}
+              <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'5px'}}>
+                <button
+                  className={`compact-tool-btn ${isCapturing ? 'tool-disabled' : ''}`}
+                  onClick={captureScreenshot} disabled={isCapturing}
                 >
-                  3. {hapticsEngaged ? 'HAPTICS ACTIVE' : 'ENGAGE HAPTICS'}
+                  <Camera size={13}/><span>SNAPSHOT</span>
                 </button>
+                {!isRecording ? (
+                  <button className="compact-tool-btn tool-rec" onClick={startManualRecording} disabled={isCapturing}>
+                    <Zap size={13}/><span>REC</span>
+                  </button>
+                ) : (
+                  <button className="compact-tool-btn tool-recording blink-red" onClick={stopManualRecording}>
+                    <Monitor size={13}/><span>STOP</span>
+                  </button>
+                )}
               </div>
 
-              <div className="panel-section intercom-panel" style={{border: isTalking ? '1px solid #ff3366' : '1px solid rgba(0, 243, 255, 0.3)', background: isTalking ? 'rgba(255, 51, 102, 0.1)' : 'rgba(0,0,0,0.3)'}}>
-                  <h3 className="panel-title" style={{color: isTalking ? '#ff3366' : 'var(--accent-cyan)'}}>
-                    {isTalking ? <Mic size={14} className="pulse"/> : <MicOff size={14}/>} 
-                    {isTalking ? ' SENDING VOICE...' : ' STAFF INTERCOM'}
-                  </h3>
-                  <button 
-                    className={`cyber-button ${isTalking ? 'danger-flash' : ''}`}
-                    onMouseDown={startRecording}
-                    onMouseUp={stopRecording}
-                    onMouseLeave={stopRecording}
-                    style={{fontSize:'11px', borderStyle: isTalking ? 'solid' : 'dashed'}}
-                  >
-                    <div style={{display:'flex', alignItems:'center', justifyContent:'center', gap:'8px'}}>
-                       {isTalking ? <Volume2 size={16}/> : <Mic size={16}/>}
-                       {isTalking ? 'RELEASE TO SEND' : 'PUSH TO TALK (NURSES)'}
-                    </div>
-                  </button>
-                       {remoteTalking && (
-                    <div style={{marginTop:'10px', fontSize:'9px', color:'#00fa9a', textAlign:'center'}} className="pulse">
-                       🔊 RECEIVING LIVE FEED FROM PATIENT SITE
-                    </div>
+              {/* Status indicators */}
+              {remoteTalking && (
+                <div style={{fontSize:'8px', color:'#22c55e', textAlign:'center'}} className="pulse">🔊 RECEIVING FROM PATIENT</div>
+              )}
+              {isRecording && (
+                <div style={{fontSize:'8px', color:'#ef4444', textAlign:'center'}} className="pulse">🔴 RECORDING</div>
+              )}
+
+              {/* PIP — Slave Visual */}
+              <div>
+                <div style={{fontSize:'7px', color:'var(--text-muted)', fontWeight:'700', letterSpacing:'1px', textTransform:'uppercase', marginBottom:'3px', display:'flex', alignItems:'center', gap:'3px'}}>
+                  <Eye size={9}/> SLAVE VISUAL PIP
+                </div>
+                <div className="feed-view" style={{height:'60px'}}>
+                  <div className="feed-probe" style={{left:`${localMouse.x}%`, top:`${localMouse.y}%`}}></div>
+                </div>
+                <div className="entanglement-widget" style={{marginTop:'4px', padding:'4px'}}>
+                  <div className="entanglement-rings" style={{width:'16px',height:'16px'}}><div className="ring-twin ring-1"></div><div className="ring-twin ring-2"></div></div>
+                  <div className="sync-state"><span className="sync-label" style={{fontSize:'9px'}}>SYNC <span style={{color:'#38bdf8'}}>{latency}ms</span></span></div>
+                </div>
+              </div>
+
+              {/* AI Assistant — with close button and mic */}
+              <div style={{background:'rgba(34,197,94,0.06)', border:'1px solid rgba(34,197,94,0.2)', borderRadius:'6px', padding:'6px', marginTop:'auto'}}>
+                <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom: assistantOpen ? '6px' : '0'}}>
+                  <div style={{display:'flex', alignItems:'center', gap:'6px'}}>
+                    <button
+                      className={`ai-assistant-toggle ${assistantOpen ? 'open' : ''}`}
+                      style={{width:'28px', height:'28px'}}
+                      onClick={() => setAssistantOpen(!assistantOpen)}
+                    >
+                      {isListening ? <Zap size={14} className="pulse"/> : <Mic size={14}/>}
+                    </button>
+                    <span style={{fontSize:'8px', color:'#22c55e', fontWeight:'800', letterSpacing:'1px', textTransform:'uppercase'}}>AI SURGICAL ASSISTANT</span>
+                  </div>
+                  {assistantOpen && (
+                    <button
+                      onClick={() => setAssistantOpen(false)}
+                      style={{background:'none', border:'none', color:'var(--text-muted)', cursor:'pointer', padding:'2px', lineHeight:1}}
+                    >
+                      <X size={14}/>
+                    </button>
                   )}
-              </div>
-
-              <div className="panel-section" style={{border: '1px solid rgba(0,250,154,0.3)', background: 'rgba(0,250,154,0.05)'}}>
-                  <h3 className="panel-title" style={{color: '#00fa9a'}}><Camera size={14} /> SURGICAL DVR HUB</h3>
-                  <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'8px'}}>
-                     <button className={`cyber-button-small ${isCapturing ? 'disabled' : ''}`} onClick={captureScreenshot} disabled={isCapturing} style={{fontSize:'9px', background:'rgba(0,250,154,0.1)'}}>
-                        <div style={{display:'flex', alignItems:'center', gap:'4px'}}><Target size={12}/> SNAPSHOT</div>
-                     </button>
-                     
-                     {!isRecording ? (
-                        <button className={`cyber-button-small ${isCapturing ? 'disabled' : ''}`} onClick={startManualRecording} disabled={isCapturing} style={{fontSize:'9px', background:'rgba(255,51,102,0.1)', color:'#ff3366'}}>
-                           <div style={{display:'flex', alignItems:'center', gap:'4px'}}><Zap size={12}/> START REC</div>
-                        </button>
-                     ) : (
-                        <button className={`cyber-button-small blink-red`} onClick={stopManualRecording} style={{fontSize:'9px', background:'rgba(255,0,0,0.8)', color:'#fff', border:'none'}}>
-                           <div style={{display:'flex', alignItems:'center', gap:'4px'}}><Monitor size={12}/> STOP RECORD</div>
-                        </button>
-                     )}
-                  </div>
-                  <div style={{fontSize:'8px', marginTop:'6px', opacity:0.6, textAlign:'center'}}>
-                     {isRecording ? <span className="pulse" style={{color:'#ff3366'}}>🔴 RECORDING SURGERY IN REAL-TIME</span> : 'MASTER AUDIT RECORDER ACTIVE'}
-                  </div>
-              </div>
-
-              <div className="panel-section">
-                <h3 className="panel-title"><Eye size={12} /> Slave Visual PIP</h3>
-                <div className="feed-view" style={{height:'100px'}}><div className="feed-probe" style={{ left: `${localMouse.x}%`, top: `${localMouse.y}%` }}></div></div>
-                <div className="entanglement-widget" style={{marginTop:'10px', padding:'8px'}}>
-                  <div className="entanglement-rings" style={{width:'25px',height:'25px'}}><div className="ring-twin ring-1"></div><div className="ring-twin ring-2"></div></div>
-                  <div className="sync-state"><span className="sync-label">SYNC LOCK (<span style={{color: 'var(--accent-cyan)'}}>{latency}ms</span>)</span></div>
                 </div>
               </div>
 
-              {/* AI Assistant Integrated into Sidebar Scrolling */}
-              <div className="ai-assistant-sidebar-integration">
-                <div className="ai-assistant-wrapper">
-                  <button 
-                    className={`ai-assistant-toggle ${assistantOpen ? 'open' : ''}`} 
-                    onClick={() => setAssistantOpen(!assistantOpen)}
-                  >
-                    {isListening ? <Zap size={24} className="pulse" /> : <Mic size={24} />}
-                  </button>
-                  <div className="ai-assistant-label">AI Surgical Assistant</div>
-                </div>
-              </div>
             </div>
           </aside>
         )}
@@ -1970,39 +2077,28 @@ function App() {
 
         {role === 'surgeon' && (
           <aside className="right-panel">
-            <div className="panel-section quantum-special" style={{border: '1px solid rgba(0, 243, 255, 0.4)', background: 'rgba(0, 243, 255, 0.05)', marginBottom: '15px'}}>
-               <h3 className="panel-title" style={{color: 'var(--accent-cyan)', display: 'flex', alignItems: 'center', gap: '8px'}}><Zap size={14} className="pulse"/> QUANTUM SYNC ENGINE</h3>
-               <div style={{fontSize: '9px', display: 'flex', flexDirection: 'column', gap: '5px'}}>
-                  <div className="metric-row"><span>WAVEFUNCTION FIDELITY</span><span style={{color: '#00fa9a'}}>0.99988</span></div>
-                  <div className="metric-row"><span>SUPERPOSITION OPTIMIZATION</span><span style={{color: 'var(--accent-cyan)'}}>ACTIVE</span></div>
-                  <div className="metric-row"><span>ENTANGLEMENT DECOHERENCE</span><span style={{color: '#ff4444'}}>0.0042%</span></div>
-                  <div style={{marginTop: '5px', height: '2px', background: 'rgba(0, 243, 255, 0.2)', width: '100%'}}><div style={{height: '100%', width: '94%', background: 'var(--accent-cyan)'}}></div></div>
-                  <div style={{fontSize: '7px', opacity: 0.5, textAlign: 'center'}}>QUANTUM CHANNEL STABILITY: ELITE</div>
-               </div>
-            </div>
-            <div className="panel-section">
-              <h3 className="panel-title"><BrainCircuit size={14} /> AI Risk Classifier</h3>
-              <div className="path-classification-list">
-                {classifiedPaths.slice(0, 4).map(p => (
-                  <div key={p.id} className="path-item-card">
-                    <span className="path-id">{p.id}</span>
-                    <span className={`risk-badge ${p.risk.split(' ')[0].toLowerCase()}`}>[{p.risk}]</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="panel-section">
-               <h3 className="panel-title"><AlertTriangle size={14} /> Neural Telemetry</h3>
-               <div className="console-log">
-                 {logs.slice(-5).map((l, i) => <div key={i} className={`log-entry ${l.type}`}><span className="log-time">[{l.time}]</span> {l.msg}</div>)}
+            <div className="panel-section quantum-special" style={{border:'1px solid rgba(56,189,248,0.3)', background:'rgba(56,189,248,0.04)', flex:'0 0 auto'}}>
+               <h3 className="panel-title"><Zap size={11} className="pulse"/> QUANTUM SYNC ENGINE</h3>
+               <div style={{fontSize:'9px', display:'flex', flexDirection:'column', gap:'3px'}}>
+                  <div className="metric-row"><span>WAVEFUNCTION FIDELITY</span><span style={{color:'#22c55e'}}>0.99988</span></div>
+                  <div className="metric-row"><span>SUPERPOSITION OPT.</span><span style={{color:'#38bdf8'}}>ACTIVE</span></div>
+                  <div className="metric-row"><span>ENTANGLEMENT DECAY</span><span style={{color:'#ef4444'}}>0.0042%</span></div>
+                  <div style={{marginTop:'3px', height:'2px', background:'rgba(56,189,248,0.15)', width:'100%', borderRadius:'2px'}}><div style={{height:'100%', width:'94%', background:'#38bdf8', borderRadius:'2px'}}></div></div>
+                  <div style={{fontSize:'7px', opacity:0.5, textAlign:'center'}}>QUANTUM CHANNEL: ELITE</div>
                </div>
             </div>
 
-            <div className="panel-section">
-              <h3 className="panel-title"><Activity size={12} /> AI Agents</h3>
-              <div className="agent-list" style={{gap:'6px'}}>
-                {agents.map(a => <div key={a.id} className="agent-card active" style={{padding:'6px'}}><span style={{fontSize:'10px', fontWeight:'800'}}>{a.name}</span><span style={{fontSize:'8px', opacity:0.6}}>{a.role}</span></div>)}
+            <div className="panel-section" style={{flex:'1', minHeight:0, overflow:'hidden'}}>
+               <h3 className="panel-title"><AlertTriangle size={11}/> NEURAL TELEMETRY</h3>
+               <div className="console-log" style={{maxHeight:'none', flex:1, overflow:'hidden'}}>
+                 {logs.slice(-3).map((l, i) => <div key={i} className={`log-entry ${l.type}`}><span className="log-time">[{l.time}]</span> {l.msg}</div>)}
+               </div>
+            </div>
+
+            <div className="panel-section" style={{flex:'0 0 auto'}}>
+              <h3 className="panel-title"><Activity size={11}/> AI AGENTS</h3>
+              <div className="agent-list" style={{gap:'4px'}}>
+                {agents.map(a => <div key={a.id} className="agent-card active" style={{padding:'4px 6px'}}><span style={{fontSize:'9px', fontWeight:'800'}}>{a.name}</span><span style={{fontSize:'7px', opacity:0.6}}>{a.role}</span></div>)}
               </div>
             </div>
           </aside>
@@ -2069,15 +2165,24 @@ function App() {
           
           {assistantOpen && (
             <div className="ai-assistant-panel">
-              <div className="ai-assistant-header">AI SURGICAL ASSISTANT <Zap size={10} /></div>
+              <div className="ai-assistant-header" style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+                <div>AI SURGICAL ASSISTANT <Zap size={10} /></div>
+                <button onClick={() => setAssistantOpen(false)} style={{background: 'none', border: 'none', color: '#ff3366', cursor: 'pointer', display: 'flex'}} title="Close AI Assistant">
+                  <X size={14} />
+                </button>
+              </div>
               <div className="ai-assistant-messages">
                 {assistantMessages.map((m, i) => (<div key={i} className={`ai-msg ${m.from === 'ai' ? 'ai-response' : 'user-msg'}`}> {m.text} </div>))}
                 {assistantBusy && <div className="thinking-loader"><span></span><span></span><span></span></div>}
               </div>
               <form className="ai-assistant-input" onSubmit={(e) => { e.preventDefault(); handleAISending(); }}>
                 <input value={assistantInput} onChange={(e) => setAssistantInput(e.target.value)} placeholder="Voice or Text command..." />
-                <button type="button" onClick={startListening}><Mic size={14} /></button>
-                <button type="submit"><Send size={14} /></button>
+                <button type="button" onClick={startListening} style={{ color: isListening ? '#ef4444' : '#38bdf8', opacity: 1 }} title="Voice Command">
+                  <Mic size={15} className={isListening ? "pulse" : ""} />
+                </button>
+                <button type="submit" style={{ color: '#22c55e', opacity: 1 }} title="Send Command">
+                  <Send size={15} />
+                </button>
               </form>
             </div>
           )}
