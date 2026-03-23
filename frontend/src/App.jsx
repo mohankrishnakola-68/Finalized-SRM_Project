@@ -339,10 +339,20 @@ function App() {
 
   // SURGEON AUTH & PROFILE STATE
   const [doctorId, setDoctorId] = useState('');
+  const [doctorPassword, setDoctorPassword] = useState('');
   const [doctorPhoto, setDoctorPhoto] = useState('https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?auto=format&fit=crop&w=150&q=80');
   const [isDoctorVerified, setIsDoctorVerified] = useState(false);
+  const [isSurgeryStarted, setIsSurgeryStarted] = useState(false);
 
-  // PATIENT AUTH & PROFILE STATE
+  // MOCK ASSIGNED SURGERIES
+  const [assignedSurgeries] = useState([
+    { patientId: 'PT-8492', date: '2026-03-21', location: 'HospitalBranch1', status: 'surgery completed' },
+    { patientId: 'PT-1004', date: '2026-03-23', location: 'HospitalBranch2', status: 'Surgery start' },
+    { patientId: 'PT-9021', date: '2026-03-23', location: 'HospitalBranch4', status: 'Surgery upcoming date' },
+  ]);
+
+  // SURGERY ROOM (FORMERLY PATIENT) AUTH & PROFILE STATE
+  const [surgeryRoomId, setSurgeryRoomId] = useState('');
   const [patientId, setPatientId] = useState('');
   const [patientPhoto, setPatientPhoto] = useState('https://images.unsplash.com/photo-1551601651-2a8555f1a141?auto=format&fit=crop&w=150&q=80');
   const [isPatientVerified, setIsPatientVerified] = useState(false);
@@ -391,21 +401,10 @@ function App() {
 
   const handleSurgeonAuth = async (e) => {
     e.preventDefault();
-    if (!doctorId) return alert("Doctor ID is required.");
+    if (!doctorId || !doctorPassword) return alert("Doctor ID and Password are required.");
     setIsDoctorVerified(true);
     triggerFlash(`✅ DOCTOR ${doctorId} VERIFIED`);
     playSciFiSound('engage');
-    
-    // Save to database
-    try {
-      const { data, error } = await supabase.from('surgical_sessions').insert([{
-         doctor_id: doctorId,
-         doctor_photo: doctorPhoto,
-         start_time: new Date().toISOString(),
-         status: 'ACTIVE'
-      }]).select().single();
-      if (data) setCurrentSessionId(data.id);
-    } catch (err) { console.error("DB Error:", err); }
   };
 
   // ADDED: QUICK-LINK SUPPORT (Check URL for ?role=surgeon/patient/admin)
@@ -828,6 +827,7 @@ function App() {
       }, 4000);
     }, 3000);
   };
+  
 
   const simulateIntercept = () => {
     playSciFiSound('alert'); // Heavy alert beep
@@ -1164,6 +1164,63 @@ function App() {
              <p style={{fontSize: '11px', letterSpacing: '2.5px', opacity: 0.7}}>GLOBAL QUANTUM SURGICAL NETWORK • v2.1</p>
           </div>
 
+          <div className="location-bar-premium" style={{marginTop: '0px', marginBottom: '25px', maxWidth: '1000px', display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '20px', background: 'transparent', border: 'none', backdropFilter: 'none', padding: 0}}>
+             {/* 1. LOCATION SETUP */}
+             <div style={{background: 'rgba(0,0,0,0.4)', padding: '20px', borderRadius: '12px', border: '1px solid rgba(0,243,255,0.2)'}}>
+                <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px'}}>
+                   <span style={{fontSize: '9px', color: 'var(--accent-cyan)', letterSpacing: '2px', fontWeight: 'bold'}}>1. ESTABLISH ORIGIN</span>
+                   <button className="cyber-button-small" onClick={handleAutoDetect} style={{fontSize: '8px', padding: '4px 8px', background: 'rgba(0, 229, 255, 0.1)'}}>
+                      <Navigation size={10} style={{marginRight: '5px'}}/> AUTO-DETECT
+                   </button>
+                </div>
+                <div style={{display: 'flex', gap: '8px'}}>
+                   <textarea 
+                     value={localLocation} 
+                     onChange={(e) => { setLocalLocation(e.target.value.toUpperCase()); setLocationConfirmed(false); }}
+                     placeholder="LOCATION ADDRESS..."
+                     rows="2"
+                     style={{
+                       flex: 1, background: 'rgba(0,0,0,0.6)', border: '1px solid ' + (locationConfirmed ? 'var(--safe-green)' : 'rgba(255,255,255,0.1)'),
+                       color: locationConfirmed ? 'var(--safe-green)' : '#fff', borderRadius: '4px', padding: '12px', fontSize: '11px', fontFamily: 'monospace', outline: 'none', resize: 'none', lineHeight: '1.4'
+                     }}
+                   />
+                   <button 
+                     onClick={() => setLocationConfirmed(!locationConfirmed)}
+                     style={{
+                       padding: '0 16px', background: locationConfirmed ? 'var(--safe-green)' : 'transparent',
+                       border: '1px solid var(--safe-green)', color: locationConfirmed ? '#000' : 'var(--safe-green)',
+                       borderRadius: '4px', cursor: 'pointer', fontWeight: '900', fontSize: '10px', height: 'auto'
+                     }}
+                   >
+                     {locationConfirmed ? 'LOCKED' : 'CONFIRM'}
+                   </button>
+                </div>
+             </div>
+
+             {/* 2. PRIVATE ROOM SETUP */}
+             <div style={{background: 'rgba(0,243,255,0.03)', padding: '20px', borderRadius: '12px', border: '1px solid rgba(0,243,255,0.2)'}}>
+                <div style={{fontSize: '9px', color: 'var(--accent-cyan)', marginBottom: '15px', letterSpacing: '2px', fontWeight: 'bold'}}>
+                   <Lock size={12} style={{marginRight: '8px', verticalAlign: 'middle'}}/> 2. PRIVATE LINK ACCESS
+                </div>
+                <div style={{display: 'flex', gap: '8px'}}>
+                   <input 
+                      value={tempRoomId}
+                      onChange={(e) => setTempRoomId(e.target.value.toUpperCase())}
+                      placeholder="ENTER ROOM CODE..."
+                      style={{
+                        flex: 1, background: 'rgba(0,0,0,0.6)', color: 'var(--accent-cyan)',
+                        border: '1px solid rgba(0,243,255,0.3)', padding: '12px',
+                        fontSize: '11px', fontFamily: 'monospace', outline: 'none', borderRadius: '4px', height: '48px'
+                      }}
+                   />
+                   <div style={{display: 'flex', gap: '5px'}}>
+                      <button onClick={() => handlePortalJoin('patient')} className="cyber-button-small" style={{fontSize: '9px', padding: '0 15px', background: 'var(--accent-cyan)', color: '#000', border: 'none', height: '48px'}}>PATIENT</button>
+                      <button onClick={() => handlePortalJoin('surgeon')} className="cyber-button-small" style={{fontSize: '9px', padding: '0 15px', borderColor: 'rgba(0,243,255,0.4)', background: 'transparent', height: '48px'}}>SURGEON</button>
+                   </div>
+                </div>
+             </div>
+          </div>
+
           <div className="gateway-grid" style={{gap: '15px', maxWidth: '1000px'}}>
              <div className="gateway-card surgeon" onClick={() => handleRoleSelect('surgeon')} style={{padding: '18px 15px'}}>
                 <div className="icon-shield" style={{width: '50px', height: '50px', marginBottom: '10px'}}><User size={24} /></div>
@@ -1187,64 +1244,7 @@ function App() {
              </div>
           </div>
 
-          <div className="location-bar-premium" style={{marginTop: '20px', maxWidth: '1000px', display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '20px', background: 'transparent', border: 'none', backdropFilter: 'none', padding: 0}}>
-             {/* 1. LOCATION SETUP */}
-             <div style={{background: 'rgba(0,0,0,0.4)', padding: '15px', borderRadius: '12px', border: '1px solid rgba(0,243,255,0.2)'}}>
-                <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px'}}>
-                   <span style={{fontSize: '9px', color: 'var(--accent-cyan)', letterSpacing: '2px', fontWeight: 'bold'}}>1. ESTABLISH ORIGIN</span>
-                   <button className="cyber-button-small" onClick={handleAutoDetect} style={{fontSize: '8px', padding: '4px 8px', background: 'rgba(0, 229, 255, 0.1)'}}>
-                      <Navigation size={10} style={{marginRight: '5px'}}/> AUTO-DETECT
-                   </button>
-                </div>
-                <div style={{display: 'flex', gap: '8px'}}>
-                   <textarea 
-                     value={localLocation} 
-                     onChange={(e) => { setLocalLocation(e.target.value.toUpperCase()); setLocationConfirmed(false); }}
-                     placeholder="LOCATION ADDRESS..."
-                     rows="1"
-                     style={{
-                       flex: 1, background: 'rgba(0,0,0,0.6)', border: '1px solid ' + (locationConfirmed ? 'var(--safe-green)' : 'rgba(255,255,255,0.1)'),
-                       color: locationConfirmed ? 'var(--safe-green)' : '#fff', borderRadius: '4px', padding: '8px', fontSize: '10px', fontFamily: 'monospace', outline: 'none', resize: 'none'
-                     }}
-                   />
-                   <button 
-                     onClick={() => setLocationConfirmed(!locationConfirmed)}
-                     style={{
-                       padding: '0 12px', background: locationConfirmed ? 'var(--safe-green)' : 'transparent',
-                       border: '1px solid var(--safe-green)', color: locationConfirmed ? '#000' : 'var(--safe-green)',
-                       borderRadius: '4px', cursor: 'pointer', fontWeight: '900', fontSize: '9px'
-                     }}
-                   >
-                     {locationConfirmed ? 'LOCKED' : 'CONFIRM'}
-                   </button>
-                </div>
-             </div>
-
-             {/* 2. PRIVATE ROOM SETUP */}
-             <div style={{background: 'rgba(0,243,255,0.03)', padding: '15px', borderRadius: '12px', border: '1px solid rgba(0,243,255,0.2)'}}>
-                <div style={{fontSize: '9px', color: 'var(--accent-cyan)', marginBottom: '10px', letterSpacing: '2px', fontWeight: 'bold'}}>
-                   <Lock size={12} style={{marginRight: '8px', verticalAlign: 'middle'}}/> 2. PRIVATE LINK ACCESS
-                </div>
-                <div style={{display: 'flex', gap: '8px'}}>
-                   <input 
-                      value={tempRoomId}
-                      onChange={(e) => setTempRoomId(e.target.value.toUpperCase())}
-                      placeholder="ENTER ROOM CODE..."
-                      style={{
-                        flex: 1, background: 'rgba(0,0,0,0.6)', color: 'var(--accent-cyan)',
-                        border: '1px solid rgba(0,243,255,0.3)', padding: '8px',
-                        fontSize: '10px', fontFamily: 'monospace', outline: 'none', borderRadius: '4px'
-                      }}
-                   />
-                   <div style={{display: 'flex', gap: '5px'}}>
-                      <button onClick={() => handlePortalJoin('patient')} className="cyber-button-small" style={{fontSize: '8px', padding: '0 10px', background: 'var(--accent-cyan)', color: '#000', border: 'none'}}>PATIENT</button>
-                      <button onClick={() => handlePortalJoin('surgeon')} className="cyber-button-small" style={{fontSize: '8px', padding: '0 10px', borderColor: 'rgba(0,243,255,0.4)', background: 'transparent'}}>SURGEON</button>
-                   </div>
-                </div>
-             </div>
-          </div>
-
-          <div style={{marginTop: '15px', display: 'flex', gap: '30px', alignItems: 'center', opacity: 0.4}}>
+          <div style={{marginTop: '25px', display: 'flex', gap: '30px', alignItems: 'center', opacity: 0.4}}>
              <div style={{display: 'flex', alignItems: 'center', gap: '8px', fontSize: '8px'}}><Lock size={10} /> <span>SSL-GATEWAY</span></div>
              <div style={{display: 'flex', alignItems: 'center', gap: '8px', fontSize: '8px'}}><Zap size={10} /> <span>AES-256 SYNC</span></div>
              <div style={{display: 'flex', alignItems: 'center', gap: '8px', fontSize: '8px'}}><Activity size={10} /> <span>QKD ENABLED</span></div>
@@ -1489,40 +1489,119 @@ function App() {
 
   return (
     <ErrorBoundary>
-      <div className={`dashboard-container ${role === 'patient' ? 'patient-mode' : ''} ${isCompromised ? 'danger-amber' : ''}`}>
+      <div className={`dashboard-container ${role === 'patient' ? 'surgery-room-mode' : ''} ${isCompromised ? 'danger-amber' : ''}`}>
         
         {/* DOCTOR AUTHENTICATION OVERLAY */}
         {role === 'surgeon' && !isDoctorVerified && (
           <div style={{position:'fixed', top:0, left:0, width:'100vw', height:'100vh', background:'rgba(0,0,0,0.95)', zIndex:9999, display:'flex', alignItems:'center', justifyContent:'center'}}>
             <form onSubmit={handleSurgeonAuth} style={{width:'400px', background:'#1a2744', padding:'30px', border:'1px solid var(--accent-cyan)', borderRadius:'12px', boxShadow:'0 0 50px rgba(0, 229, 255, 0.2)'}}>
-               <h2 style={{color:'var(--accent-cyan)', textAlign:'center', letterSpacing:'2px', marginBottom:'20px'}}><Shield size={24} style={{verticalAlign:'middle'}}/> SURGEON VERIFICATION</h2>
+               <h2 style={{color:'var(--accent-cyan)', textAlign:'center', letterSpacing:'2px', marginBottom:'20px'}}><Shield size={24} style={{verticalAlign:'middle'}}/> DOCTOR LOGIN</h2>
                <div style={{marginBottom:'15px'}}>
                  <label style={{display:'block', fontSize:'10px', color:'var(--safe-green)', marginBottom:'5px'}}>DOCTOR ID *</label>
                  <input required value={doctorId} onChange={e=>setDoctorId(e.target.value)} style={{width:'100%', padding:'10px', background:'rgba(0,0,0,0.5)', border:'1px solid rgba(0,250,154,0.3)', color:'#fff', outline:'none'}} placeholder="e.g. DR-8492" />
                </div>
-               <div style={{marginBottom:'25px'}}>
-                 <label style={{display:'block', fontSize:'10px', color:'var(--safe-green)', marginBottom:'5px'}}>PROFILE PHOTO URL</label>
-                 <input value={doctorPhoto} onChange={e=>setDoctorPhoto(e.target.value)} style={{width:'100%', padding:'10px', background:'rgba(0,0,0,0.5)', border:'1px solid rgba(0,250,154,0.3)', color:'#fff', outline:'none'}} placeholder="Image URL..." />
+               <div style={{marginBottom:'15px'}}>
+                 <label style={{display:'block', fontSize:'10px', color:'var(--safe-green)', marginBottom:'5px'}}>PASSWORD *</label>
+                 <input type="password" required value={doctorPassword} onChange={e=>setDoctorPassword(e.target.value)} style={{width:'100%', padding:'10px', background:'rgba(0,0,0,0.5)', border:'1px solid rgba(0,250,154,0.3)', color:'#fff', outline:'none'}} placeholder="••••••••" />
                </div>
-               <button type="submit" className="cyber-button" style={{padding:'15px', fontSize:'14px', background:'var(--safe-green)', color:'#000'}}>AUTHENTICATE & ENTER COCKPIT</button>
+               <div style={{marginBottom:'25px'}}>
+                 <label style={{display:'block', fontSize:'10px', color:'var(--accent-cyan)', marginBottom:'10px'}}>PROFILE PICTURE</label>
+                 <div style={{display:'flex', alignItems:'center', gap:'15px'}}>
+                   <img src={doctorPhoto} alt="Preview" style={{width:'50px', height:'50px', borderRadius:'8px', border:'1px solid var(--accent-cyan)', objectFit:'cover'}} />
+                   <label className="cyber-button-small" style={{cursor:'pointer', fontSize:'10px', padding:'8px 12px'}}>
+                     UPLOAD PHOTO
+                     <input type="file" accept="image/*" hidden onChange={(e) => {
+                       const file = e.target.files[0];
+                       if (file) {
+                         const reader = new FileReader();
+                         reader.onloadend = () => setDoctorPhoto(reader.result);
+                         reader.readAsDataURL(file);
+                       }
+                     }} />
+                   </label>
+                 </div>
+               </div>
+               <button type="submit" className="cyber-button" style={{padding:'15px', fontSize:'14px', background:'var(--safe-green)', color:'#000'}}>AUTHENTICATE & ENTER</button>
             </form>
           </div>
         )}
 
-        {/* PATIENT AUTHENTICATION OVERLAY */}
+        {/* DOCTOR HOME DASHBOARD */}
+        {role === 'surgeon' && isDoctorVerified && !isSurgeryStarted && (
+          <div style={{width:'100vw', height:'100vh', background:'#070e1a', padding:'40px', overflowY:'auto'}}>
+             <div style={{maxWidth:'1000px', margin:'0 auto'}}>
+                <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'40px', borderBottom:'1px solid rgba(56,189,248,0.2)', paddingBottom:'20px'}}>
+                   <div style={{display:'flex', gap:'20px', alignItems:'center'}}>
+                      <img src={doctorPhoto} alt="Doctor" style={{width:'80px', height:'80px', borderRadius:'10px', border:'2px solid var(--accent-cyan)'}} />
+                      <div>
+                         <h1 style={{margin:0, color:'var(--accent-cyan)'}}>Welcome, Dr. {doctorId}</h1>
+                         <p style={{margin:0, opacity:0.6}}>Haptic-Q Specialized Surgical Unit</p>
+                      </div>
+                   </div>
+                   <button onClick={() => window.location.reload()} className="cyber-button-small" style={{borderColor:'#ef4444', color:'#ef4444'}}><LogOut size={14}/> LOGOUT</button>
+                </div>
+
+                <h2 style={{fontSize:'18px', color:'var(--safe-green)', marginBottom:'20px'}}><Activity size={18} style={{verticalAlign:'middle'}}/> ASSIGNED SURGERIES & HISTORY</h2>
+                
+                <div style={{background:'rgba(255,255,255,0.03)', border:'1px solid rgba(56,189,248,0.1)', borderRadius:'12px', overflow:'hidden'}}>
+                   <table style={{width:'100%', borderCollapse:'collapse', textAlign:'left'}}>
+                      <thead style={{background:'rgba(56,189,248,0.1)'}}>
+                         <tr>
+                            <th style={{padding:'15px'}}>PATIENT ID</th>
+                            <th>SURGERY DATE</th>
+                            <th>LOCATION</th>
+                            <th>STATUS</th>
+                         </tr>
+                      </thead>
+                      <tbody>
+                         {assignedSurgeries.map((s, i) => (
+                            <tr key={i} style={{borderBottom:'1px solid rgba(255,255,255,0.05)'}}>
+                               <td style={{padding:'15px', fontWeight:'bold'}}>{s.patientId}</td>
+                               <td>{s.date}</td>
+                               <td>{s.location}</td>
+                               <td>
+                                  {s.status === 'Surgery start' ? (
+                                     <button className="cyber-button-small" style={{background:'var(--safe-green)', color:'#000', border:'none'}} onClick={() => { setIsSurgeryStarted(true); setRoomId(s.patientId); triggerFlash("🚀 INITIALIZING SURGERY ENGINE..."); playSciFiSound('engage'); }}>START SURGERY</button>
+                                  ) : (
+                                     <span style={{fontSize:'11px', textTransform:'uppercase', opacity:0.6, padding:'4px 10px', background:'rgba(255,255,255,0.05)', borderRadius:'4px'}}>{s.status}</span>
+                                  )}
+                               </td>
+                            </tr>
+                         ))}
+                      </tbody>
+                   </table>
+                </div>
+             </div>
+          </div>
+        )}
+
+        {/* SURGERY ROOM AUTHENTICATION OVERLAY */}
         {role === 'patient' && !isPatientVerified && (
           <div style={{position:'fixed', top:0, left:0, width:'100vw', height:'100vh', background:'rgba(0,0,0,0.95)', zIndex:9999, display:'flex', alignItems:'center', justifyContent:'center'}}>
-            <form onSubmit={(e) => { e.preventDefault(); if(patientId) { setIsPatientVerified(true); playSciFiSound('engage'); triggerFlash(`✅ PATIENT ${patientId} REGISTERED`); } }} style={{width:'400px', background:'#1a2744', padding:'30px', border:'1px solid rgba(34,197,94,0.5)', borderRadius:'12px', boxShadow:'0 0 50px rgba(34,197,94,0.2)'}}>
-               <h2 style={{color:'var(--safe-green)', textAlign:'center', letterSpacing:'2px', marginBottom:'20px'}}><Shield size={24} style={{verticalAlign:'middle'}}/> NEURAL SYNC LOGIN</h2>
-               <div style={{marginBottom:'15px'}}>
-                 <label style={{display:'block', fontSize:'10px', color:'var(--safe-green)', marginBottom:'5px'}}>PATIENT ID *</label>
-                 <input required value={patientId} onChange={e=>setPatientId(e.target.value)} style={{width:'100%', padding:'10px', background:'rgba(0,0,0,0.5)', border:'1px solid rgba(0,250,154,0.3)', color:'#fff', outline:'none'}} placeholder="e.g. PT-1004" />
-               </div>
-               <div style={{marginBottom:'25px'}}>
-                 <label style={{display:'block', fontSize:'10px', color:'var(--safe-green)', marginBottom:'5px'}}>PROFILE PHOTO URL</label>
-                 <input value={patientPhoto} onChange={e=>setPatientPhoto(e.target.value)} style={{width:'100%', padding:'10px', background:'rgba(0,0,0,0.5)', border:'1px solid rgba(0,250,154,0.3)', color:'#fff', outline:'none'}} placeholder="Image URL..." />
-               </div>
-               <button type="submit" className="cyber-button" style={{padding:'15px', fontSize:'14px', background:'var(--safe-green)', color:'#000'}}>ACCESS SECURE FEED</button>
+            <form onSubmit={(e) => { e.preventDefault(); if(surgeryRoomId) { setIsPatientVerified(true); playSciFiSound('engage'); triggerFlash(`✅ SURGERY ROOM ${surgeryRoomId} ONLINE`); } }} style={{width:'400px', background:'#1a2744', padding:'30px', border:'1px solid rgba(34,197,94,0.5)', borderRadius:'12px', boxShadow:'0 0 50px rgba(34,197,94,0.2)'}}>
+               <h2 style={{color:'var(--safe-green)', textAlign:'center', letterSpacing:'2px', marginBottom:'20px'}}><Shield size={24} style={{verticalAlign:'middle'}}/> SURGERY ROOM LOGIN</h2>
+                <div style={{marginBottom:'20px'}}>
+                  <label style={{display:'block', fontSize:'10px', color:'var(--safe-green)', marginBottom:'5px'}}>ROOM ID *</label>
+                  <input required value={surgeryRoomId} onChange={e=>setSurgeryRoomId(e.target.value)} style={{width:'100%', padding:'10px', background:'rgba(0,0,0,0.5)', border:'1px solid rgba(0,250,154,0.3)', color:'#fff', outline:'none'}} placeholder="e.g. SR-102" />
+                </div>
+                <div style={{marginBottom:'25px'}}>
+                  <label style={{display:'block', fontSize:'10px', color:'var(--safe-green)', marginBottom:'10px'}}>ROOM PROFILE IMAGE</label>
+                  <div style={{display:'flex', alignItems:'center', gap:'15px'}}>
+                    <img src={patientPhoto} alt="Preview" style={{width:'50px', height:'50px', borderRadius:'8px', border:'1px solid var(--safe-green)', objectFit:'cover'}} />
+                    <label className="cyber-button-small" style={{cursor:'pointer', fontSize:'10px', padding:'8px 12px', borderColor:'var(--safe-green)', color:'var(--safe-green)'}}>
+                      SELECT IMAGE
+                      <input type="file" accept="image/*" hidden onChange={(e) => {
+                        const file = e.target.files[0];
+                        if (file) {
+                          const reader = new FileReader();
+                          reader.onloadend = () => setPatientPhoto(reader.result);
+                          reader.readAsDataURL(file);
+                        }
+                      }} />
+                    </label>
+                  </div>
+                </div>
+                <button type="submit" className="cyber-button" style={{padding:'15px', fontSize:'14px', background:'var(--safe-green)', color:'#000'}}>ACTIVATE ROOM DASHBOARD</button>
             </form>
           </div>
         )}
@@ -1570,16 +1649,16 @@ function App() {
         {/* COL 3 — LOCATION HUB (full name, no truncation) */}
         <div className="intelligence-hub">
            <div className="registry-row" style={{display: 'flex', gap: '8px', alignItems: 'center'}}>
-              <img src={role === 'surgeon' ? doctorPhoto : patientPhoto} alt="Local" style={{width: '28px', height: '28px', borderRadius: '4px', objectFit: 'cover', border: '1px solid rgba(56,189,248,0.5)'}} />
+              <img src={doctorPhoto} alt="Local" style={{width: '28px', height: '28px', borderRadius: '4px', objectFit: 'cover', border: '1px solid rgba(56,189,248,0.5)'}} />
               <div className="registry-item" style={{flex: 1}}>
-                 <span className="registry-label">{role === 'surgeon' ? 'MASTER TERMINAL (LOCAL)' : 'PATIENT TERMINAL (LOCAL)'}</span>
-                 <span className="registry-value">{localLocation}</span>
+                 <span className="registry-label">{role === 'surgeon' ? 'MASTER TERMINAL (LOCAL)' : 'SURGERY ROOM TERMINAL (LOCAL)'}</span>
+                 <span className="registry-value">{role === 'surgeon' ? `DR. ${doctorId}` : surgeryRoomId}</span>
               </div>
            </div>
            <div className="registry-row" style={{display: 'flex', gap: '8px', alignItems: 'center'}}>
-              <img src={role === 'surgeon' ? patientPhoto : doctorPhoto} alt="Remote" style={{width: '28px', height: '28px', borderRadius: '4px', objectFit: 'cover', border: '1px solid rgba(34,197,94,0.3)'}} />
+              <img src={patientPhoto} alt="Remote" style={{width: '28px', height: '28px', borderRadius: '4px', objectFit: 'cover', border: '1px solid rgba(34,197,94,0.3)'}} />
               <div className="registry-item" style={{borderColor: 'rgba(34, 197, 94, 0.25)', flex: 1}}>
-                 <span className="registry-label">{role === 'surgeon' ? 'REMOTELY LINKED SLAVE' : 'LINKED MASTER NODE'}</span>
+                 <span className="registry-label">{role === 'surgeon' ? 'SURGERY ROOM LINK' : 'LINKED MASTER NODE'}</span>
                  <span className="registry-value" style={{color: '#22c55e'}}>{remoteLocation || '— AWAITING CONNECTION —'}</span>
               </div>
            </div>
@@ -1625,164 +1704,174 @@ function App() {
       <div className="main-content">
         {role === 'surgeon' && (
           <aside className="side-panel">
-            
-            {/* ── DOCTOR PROFILE & PATIENT LINK ──────────────── */}
-            <div className="panel-section" style={{background: 'rgba(0, 243, 255, 0.03)', border: '1px solid rgba(56, 189, 248, 0.3)'}}>
-               <h3 className="panel-title"><User size={12}/> ACTIVE SESSION PROFILES</h3>
-               <div style={{display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', paddingBottom: '8px', borderBottom: '1px solid rgba(255,255,255,0.05)'}}>
-                  <img src={doctorPhoto} alt="Doctor" style={{width: '32px', height: '32px', borderRadius: '4px', border: '1px solid var(--accent-cyan)', objectFit: 'cover'}} />
-                  <div>
-                    <div style={{fontSize: '8px', color: 'var(--text-muted)'}}>ATTENDING SURGEON</div>
-                    <div style={{fontSize: '11px', color: 'var(--accent-cyan)', fontWeight: 'bold'}}>{doctorId || 'DR. UNKNOWN'}</div>
-                  </div>
-               </div>
-               <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
-                  <img src="https://images.unsplash.com/photo-1551601651-2a8555f1a141?auto=format&fit=crop&q=80&w=100&h=100" alt="Patient Remote" style={{width: '32px', height: '32px', borderRadius: '4px', border: '1px solid rgba(34,197,94,0.5)', objectFit: 'cover'}} />
-                  <div>
-                    <div style={{fontSize: '8px', color: 'var(--text-muted)'}}>REMOTELY LINKED PATIENT</div>
-                    <div style={{fontSize: '11px', color: 'var(--safe-green)', fontWeight: 'bold'}}>{patientId || 'AWAITING CONNECTION'}</div>
-                  </div>
-               </div>
-            </div>
+            <div className="scrollable-sidebar-content">
+              {/* ── DOCTOR PROFILE & PATIENT LINK ──────────────── */}
+              <div className="panel-section" style={{background: 'rgba(0, 243, 255, 0.03)', border: '1px solid rgba(56, 189, 248, 0.3)'}}>
+                 <h3 className="panel-title"><User size={12}/> ACTIVE SESSION PROFILES</h3>
+                 <div style={{display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', paddingBottom: '8px', borderBottom: '1px solid rgba(255,255,255,0.05)'}}>
+                    <img src={doctorPhoto} alt="Doctor" style={{width: '32px', height: '32px', borderRadius: '4px', border: '1px solid var(--accent-cyan)', objectFit: 'cover'}} />
+                    <div>
+                      <div style={{fontSize: '8px', color: 'var(--text-muted)'}}>ATTENDING SURGEON</div>
+                      <div style={{fontSize: '11px', color: 'var(--accent-cyan)', fontWeight: 'bold'}}>{doctorId || 'DR. UNKNOWN'}</div>
+                    </div>
+                 </div>
+                 <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
+                    <img src="https://images.unsplash.com/photo-1516549655169-df83a0774514?auto=format&fit=crop&q=80&w=100" alt="Surgery Room" style={{width: '32px', height: '32px', borderRadius: '4px', border: '1px solid rgba(34,197,94,0.5)', objectFit: 'cover'}} />
+                    <div>
+                      <div style={{fontSize: '8px', color: 'var(--text-muted)'}}>REMOTE SURGERY ROOM</div>
+                      <div style={{fontSize: '11px', color: 'var(--safe-green)', fontWeight: 'bold'}}>{remoteLocation || 'AWAITING CONNECTION'}</div>
+                    </div>
+                 </div>
+              </div>
 
-            {/* ── STEP 1: ANATOMICAL TARGET ──────────────── */}
-            <div className="panel-section" style={{
-              border: isPatientBroadcasting ? '2px solid #ef4444' : (selectedOrgan ? '1px solid #22c55e' : '1px solid #38bdf8'),
-              boxShadow: selectedOrgan ? 'none' : '0 0 12px rgba(56,189,248,0.15)'
-            }}>
-              <h3 className="panel-title" style={{ color: isPatientBroadcasting ? '#ef4444' : (selectedOrgan ? '#22c55e' : '#38bdf8') }}>
-                <Target size={12}/> 1. SET ANATOMICAL TARGET
-                {isPatientBroadcasting && <span className="pulse" style={{fontSize:'8px', color:'#ef4444', marginLeft:'auto', display:'flex', alignItems:'center', gap:'3px'}}><div style={{width:'5px',height:'5px',background:'#ef4444',borderRadius:'50%'}}></div>LIVE</span>}
-              </h3>
-              <select
-                value={selectedOrgan}
-                disabled={isPatientBroadcasting}
-                onChange={(e) => { setSelectedOrgan(e.target.value); playSciFiSound('engage'); }}
-                style={{ width:'100%', background:'rgba(0,0,0,0.5)', color: isPatientBroadcasting ? '#fff' : '#38bdf8',
-                  border: isPatientBroadcasting ? '1px solid #ef4444' : '1px solid #38bdf8',
-                  padding:'7px 8px', borderRadius:'6px', fontFamily:'inherit', outline:'none',
-                  cursor: isPatientBroadcasting ? 'not-allowed' : 'pointer', fontSize:'11px', fontWeight:'600' }}
-              >
-                <option value="">{isPatientBroadcasting ? '── BLOCKED BY BROADCAST ──' : '── SELECT ORGAN ──'}</option>
-                <option value="Heart">❤️  CARDIAC (Heart)</option>
-                <option value="Brain">🧠  NEURAL (Brain)</option>
-                <option value="Spine">🦴  ORTHOPEDIC (Spine)</option>
-                <option value="Stomach">🫁  GASTRIC (Stomach)</option>
-                <option value="Hand">✋  METACARPAL (Hand)</option>
-              </select>
-              {isPatientBroadcasting && (
-                <button className="cyber-button-small risk-btn"
-                  onClick={() => { if(socket){socket.emit('broadcast-stop');socket.emit('broadcast-status',false);} setIsPatientBroadcasting(false); setBroadcastRequestStatus('IDLE'); setShowLiveStream(false); playSciFiSound('danger'); }}
-                  style={{width:'100%', padding:'6px', fontSize:'10px', marginTop:'4px', background:'rgba(239,68,68,0.15)', borderColor:'#ef4444', color:'#ef4444'}}>
-                  <X size={12}/> FORCED DISCONNECT
-                </button>
-              )}
-            </div>
-
-            {/* ── STEP 2: MASTER CONTROLS ──────────────────── */}
-            <div className="panel-section">
-              <h3 className="panel-title"><Cpu size={12}/> 2. MASTER CONTROLS</h3>
-              <button
-                className="cyber-button"
-                onClick={runSimulationWorkflow}
-                disabled={systemState !== 'IDLE' || !selectedOrgan || isPatientBroadcasting}
-                style={{
-                  opacity: (systemState !== 'IDLE' || !selectedOrgan || isPatientBroadcasting) ? 0.35 : 1,
-                  cursor: (systemState !== 'IDLE' || !selectedOrgan || isPatientBroadcasting) ? 'not-allowed' : 'pointer'
-                }}
-              >
-                {systemState === 'IDLE' ? 'INITIALIZE NEURAL SCAN' : `SCANNING: ${systemState}…`}
-              </button>
-            </div>
-
-            {/* ── SURGICAL TOOLS ─────────────────────────────── */}
-            <div className="panel-section" style={{flex: 1}}>
-              <h3 className="panel-title"><Activity size={12}/> SURGICAL TOOLS</h3>
-
-              {/* Haptics — full row */}
-              <button
-                className={`compact-tool-btn-row ${hapticsEngaged ? 'tool-active' : ''} ${(!selectedOrgan || systemState !== 'OPTIMIZED') ? 'tool-disabled' : ''}`}
-                onClick={() => { playSciFiSound('engage'); setHapticsEngaged(!hapticsEngaged); }}
-                disabled={!selectedOrgan || systemState !== 'OPTIMIZED'}
-              >
-                <Zap size={13}/>
-                <span>HAPTICS — {hapticsEngaged ? '● ACTIVE' : 'ENGAGE'}</span>
-              </button>
-
-              {/* Push-to-Talk — full row */}
-              <button
-                className={`compact-tool-btn-row ${isTalking ? 'tool-danger' : ''}`}
-                onMouseDown={startRecording} onMouseUp={stopRecording} onMouseLeave={stopRecording}
-              >
-                {isTalking ? <Volume2 size={13}/> : <Mic size={13}/>}
-                <span>{isTalking ? '● TRANSMITTING — RELEASE TO STOP' : 'PUSH TO TALK (NURSES)'}</span>
-              </button>
-
-              {/* Snapshot + Record — 2-col row */}
-              <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'5px'}}>
-                <button
-                  className={`compact-tool-btn ${isCapturing ? 'tool-disabled' : ''}`}
-                  onClick={captureScreenshot} disabled={isCapturing}
+              {/* ── STEP 1: ANATOMICAL TARGET ──────────────── */}
+              <div className="panel-section" style={{
+                border: isPatientBroadcasting ? '2px solid #ef4444' : (selectedOrgan ? '1px solid #22c55e' : '1px solid #38bdf8'),
+                boxShadow: selectedOrgan ? 'none' : '0 0 12px rgba(56,189,248,0.15)'
+              }}>
+                <h3 className="panel-title" style={{ color: isPatientBroadcasting ? '#ef4444' : (selectedOrgan ? '#22c55e' : '#38bdf8') }}>
+                  <Target size={12}/> 1. SET ANATOMICAL TARGET
+                  {isPatientBroadcasting && <span className="pulse" style={{fontSize:'8px', color:'#ef4444', marginLeft:'auto', display:'flex', alignItems:'center', gap:'3px'}}><div style={{width:'5px',height:'5px',background:'#ef4444',borderRadius:'50%'}}></div>LIVE</span>}
+                </h3>
+                <select
+                  value={selectedOrgan}
+                  disabled={isPatientBroadcasting}
+                  onChange={(e) => { setSelectedOrgan(e.target.value); playSciFiSound('engage'); }}
+                  style={{ width:'100%', background:'rgba(0,0,0,0.5)', color: isPatientBroadcasting ? '#fff' : '#38bdf8',
+                    border: isPatientBroadcasting ? '1px solid #ef4444' : '1px solid #38bdf8',
+                    padding:'7px 8px', borderRadius:'6px', fontFamily:'inherit', outline:'none',
+                    cursor: isPatientBroadcasting ? 'not-allowed' : 'pointer', fontSize:'11px', fontWeight:'600' }}
                 >
-                  <Camera size={13}/><span>SNAPSHOT</span>
-                </button>
-                {!isRecording ? (
-                  <button className="compact-tool-btn tool-rec" onClick={startManualRecording} disabled={isCapturing}>
-                    <Zap size={13}/><span>REC</span>
-                  </button>
-                ) : (
-                  <button className="compact-tool-btn tool-recording blink-red" onClick={stopManualRecording}>
-                    <Monitor size={13}/><span>STOP</span>
+                  <option value="">{isPatientBroadcasting ? '── BLOCKED BY BROADCAST ──' : '── SELECT ORGAN ──'}</option>
+                  <option value="Heart">❤️  CARDIAC (Heart)</option>
+                  <option value="Brain">🧠  NEURAL (Brain)</option>
+                  <option value="Spine">🦴  ORTHOPEDIC (Spine)</option>
+                  <option value="Stomach">🫁  GASTRIC (Stomach)</option>
+                  <option value="Hand">✋  METACARPAL (Hand)</option>
+                </select>
+                {isPatientBroadcasting && (
+                  <button className="cyber-button-small risk-btn"
+                    onClick={() => { if(socket){socket.emit('broadcast-stop');socket.emit('broadcast-status',false);} setIsPatientBroadcasting(false); setBroadcastRequestStatus('IDLE'); setShowLiveStream(false); playSciFiSound('danger'); }}
+                    style={{width:'100%', padding:'6px', fontSize:'10px', marginTop:'4px', background:'rgba(239,68,68,0.15)', borderColor:'#ef4444', color:'#ef4444'}}>
+                    <X size={12}/> FORCED DISCONNECT
                   </button>
                 )}
               </div>
 
-              {/* Status indicators */}
-              {remoteTalking && (
-                <div style={{fontSize:'8px', color:'#22c55e', textAlign:'center'}} className="pulse">🔊 RECEIVING FROM PATIENT</div>
-              )}
-              {isRecording && (
-                <div style={{fontSize:'8px', color:'#ef4444', textAlign:'center'}} className="pulse">🔴 RECORDING</div>
-              )}
-
-              {/* PIP — Slave Visual */}
-              <div>
-                <div style={{fontSize:'7px', color:'var(--text-muted)', fontWeight:'700', letterSpacing:'1px', textTransform:'uppercase', marginBottom:'3px', display:'flex', alignItems:'center', gap:'3px'}}>
-                  <Eye size={9}/> SLAVE VISUAL PIP
-                </div>
-                <div className="feed-view" style={{height:'60px'}}>
-                  <div className="feed-probe" style={{left:`${localMouse.x}%`, top:`${localMouse.y}%`}}></div>
-                </div>
-                <div className="entanglement-widget" style={{marginTop:'4px', padding:'4px'}}>
-                  <div className="entanglement-rings" style={{width:'16px',height:'16px'}}><div className="ring-twin ring-1"></div><div className="ring-twin ring-2"></div></div>
-                  <div className="sync-state"><span className="sync-label" style={{fontSize:'9px'}}>SYNC <span style={{color:'#38bdf8'}}>{latency}ms</span></span></div>
-                </div>
+              {/* ── STEP 2: MASTER CONTROLS ──────────────────── */}
+              <div className="panel-section">
+                <h3 className="panel-title"><Cpu size={12}/> 2. MASTER CONTROLS</h3>
+                <button
+                  className="cyber-button"
+                  onClick={runSimulationWorkflow}
+                  disabled={systemState !== 'IDLE' || !selectedOrgan || isPatientBroadcasting}
+                  style={{
+                    opacity: (systemState !== 'IDLE' || !selectedOrgan || isPatientBroadcasting) ? 0.35 : 1,
+                    cursor: (systemState !== 'IDLE' || !selectedOrgan || isPatientBroadcasting) ? 'not-allowed' : 'pointer'
+                  }}
+                >
+                  {systemState === 'IDLE' ? 'INITIALIZE NEURAL SCAN' : `SCANNING: ${systemState}…`}
+                </button>
               </div>
 
-              {/* AI Assistant — with close button and mic */}
-              <div style={{background:'rgba(34,197,94,0.06)', border:'1px solid rgba(34,197,94,0.2)', borderRadius:'6px', padding:'6px', marginTop:'auto'}}>
-                <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom: assistantOpen ? '6px' : '0'}}>
-                  <div style={{display:'flex', alignItems:'center', gap:'6px'}}>
-                    <button
-                      className={`ai-assistant-toggle ${assistantOpen ? 'open' : ''}`}
-                      style={{width:'28px', height:'28px'}}
-                      onClick={() => setAssistantOpen(!assistantOpen)}
-                    >
-                      {isListening ? <Zap size={14} className="pulse"/> : <Mic size={14}/>}
+              {/* ── SURGICAL TOOLS ─────────────────────────────── */}
+              <div className="panel-section">
+                <h3 className="panel-title"><Activity size={12}/> SURGICAL TOOLS</h3>
+
+                {/* Haptics — full row */}
+                <button
+                  className={`compact-tool-btn-row ${hapticsEngaged ? 'tool-active' : ''} ${(!selectedOrgan || systemState !== 'OPTIMIZED') ? 'tool-disabled' : ''}`}
+                  onClick={() => { playSciFiSound('engage'); setHapticsEngaged(!hapticsEngaged); }}
+                  disabled={!selectedOrgan || systemState !== 'OPTIMIZED'}
+                >
+                  <Zap size={13}/>
+                  <span>HAPTICS — {hapticsEngaged ? '● ACTIVE' : 'ENGAGE'}</span>
+                </button>
+
+                {/* Push-to-Talk — full row */}
+                <button
+                  className={`compact-tool-btn-row ${isTalking ? 'tool-danger' : ''}`}
+                  onMouseDown={startRecording} onMouseUp={stopRecording} onMouseLeave={stopRecording}
+                >
+                  {isTalking ? <Volume2 size={13}/> : <Mic size={13}/>}
+                  <span>{isTalking ? '● TRANSMITTING — RELEASE TO STOP' : 'PUSH TO TALK (NURSES)'}</span>
+                </button>
+
+                {/* Snapshot + Record — 2-col row */}
+                <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'5px'}}>
+                  <button
+                    className={`compact-tool-btn ${isCapturing ? 'tool-disabled' : ''}`}
+                    onClick={captureScreenshot} disabled={isCapturing}
+                  >
+                    <Camera size={13}/><span>SNAPSHOT</span>
+                  </button>
+                  {!isRecording ? (
+                    <button className="compact-tool-btn tool-rec" onClick={startManualRecording} disabled={isCapturing}>
+                      <Zap size={13}/><span>REC</span>
                     </button>
-                    <span style={{fontSize:'8px', color:'#22c55e', fontWeight:'800', letterSpacing:'1px', textTransform:'uppercase'}}>AI SURGICAL ASSISTANT</span>
-                  </div>
-                  {assistantOpen && (
-                    <button
-                      onClick={() => setAssistantOpen(false)}
-                      style={{background:'none', border:'none', color:'var(--text-muted)', cursor:'pointer', padding:'2px', lineHeight:1}}
-                    >
-                      <X size={14}/>
+                  ) : (
+                    <button className="compact-tool-btn tool-recording blink-red" onClick={stopManualRecording}>
+                      <Monitor size={13}/><span>STOP</span>
                     </button>
                   )}
                 </div>
+
+                {/* Status indicators */}
+                {remoteTalking && (
+                  <div style={{fontSize:'8px', color:'#22c55e', textAlign:'center'}} className="pulse">🔊 RECEIVING FROM PATIENT</div>
+                )}
+                {isRecording && (
+                  <div style={{fontSize:'8px', color:'#ef4444', textAlign:'center'}} className="pulse">🔴 RECORDING</div>
+                )}
+
+                {/* PIP — Slave Visual */}
+                <div>
+                  <div style={{fontSize:'7px', color:'var(--text-muted)', fontWeight:'700', letterSpacing:'1px', textTransform:'uppercase', marginBottom:'3px', display:'flex', alignItems:'center', gap:'3px'}}>
+                    <Eye size={9}/> SLAVE VISUAL PIP
+                  </div>
+                  <div className="feed-view" style={{height:'60px'}}>
+                    <div className="feed-probe" style={{left:`${localMouse.x}%`, top:`${localMouse.y}%`}}></div>
+                  </div>
+                  <div className="entanglement-widget" style={{marginTop:'4px', padding:'4px'}}>
+                    <div className="entanglement-rings" style={{width:'16px',height:'16px'}}><div className="ring-twin ring-1"></div><div className="ring-twin ring-2"></div></div>
+                    <div className="sync-state"><span className="sync-label" style={{fontSize:'9px'}}>SYNC <span style={{color:'#38bdf8'}}>{latency}ms</span></span></div>
+                  </div>
+                </div>
               </div>
 
+              {/* ── AI SURGICAL ASSISTANT ──────────────────────── */}
+              <div className="panel-section" style={{background: 'rgba(34,197,94,0.06)', border: '1px solid rgba(34,197,94,0.3)'}}>
+                 <h3 className="panel-title" style={{color: '#22c55e', display: 'flex', justifyContent: 'space-between'}}>
+                    <span style={{display:'flex', alignItems:'center', gap:'5px'}}><BrainCircuit size={12}/> AI ASSISTANT</span>
+                    <button onClick={() => setAssistantOpen(!assistantOpen)} style={{background:'none', border:'none', color:'#22c55e', cursor:'pointer'}} title="Toggle Chat">
+                       {assistantOpen ? <X size={12}/> : <Zap size={12} className="pulse"/>}
+                    </button>
+                 </h3>
+                 
+                 {assistantOpen && (
+                   <div style={{display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '5px'}}>
+                      <div className="ai-assistant-messages" style={{height: '150px', background: 'rgba(0,0,0,0.3)', borderRadius: '4px', padding: '5px', overflowY: 'auto', fontSize: '10px'}}>
+                        {assistantMessages.map((m, i) => (
+                          <div key={i} className={`ai-msg ${m.from === 'ai' ? 'ai-response' : 'user-msg'}`} style={{marginBottom: '5px', padding: '4px 8px'}}>
+                            {m.text}
+                          </div>
+                        ))}
+                        {assistantBusy && <div className="thinking-loader" style={{fontSize: '8px', opacity: 0.5}}>THINKING...</div>}
+                      </div>
+                      
+                      <form onSubmit={(e) => { e.preventDefault(); handleAISending(); }} style={{display: 'flex', gap: '4px'}}>
+                         <input 
+                           value={assistantInput} 
+                           onChange={(e) => setAssistantInput(e.target.value)}
+                           placeholder="Command..." 
+                           style={{flex: 1, background: 'rgba(0,0,0,0.5)', border: '1px solid rgba(34,197,94,0.3)', color: '#fff', fontSize: '10px', padding: '5px', borderRadius: '4px', outline: 'none'}}
+                         />
+                         <button type="button" onClick={startListening} style={{background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)', color: isListening ? '#ef4444' : '#22c55e', padding: '5px', borderRadius: '4px'}}><Mic size={12}/></button>
+                         <button type="submit" style={{background: 'var(--safe-green)', border: 'none', color: '#000', padding: '5px', borderRadius: '4px'}}><Send size={12}/></button>
+                      </form>
+                   </div>
+                 )}
+              </div>
             </div>
           </aside>
         )}
@@ -1791,26 +1880,13 @@ function App() {
           <aside className="side-panel">
             <div className="scrollable-sidebar-content">
               <div className="panel-section">
-                <h3 className="panel-title"><Navigation size={14} /> Telemetry Origin</h3>
+                <h3 className="panel-title"><Layout size={14} /> SURGERY ROOM CONFIG</h3>
                 <div style={{display:'flex', gap:'8px', marginBottom:'10px'}}>
-                  <textarea 
-                    className="addr-text" 
-                    value={localLocation} 
-                    autoFocus
-                    onChange={(e) => setLocalLocation(e.target.value)}
-                    placeholder="LOCATION..."
-                    disabled={locationConfirmed}
-                    style={{height:'60px', borderRadius:'4px', background:'rgba(0,0,0,0.5)', color:'var(--accent-cyan)', border:'1px solid rgba(0, 243, 255, 0.3)', padding:'8px', fontSize:'11px', width:'100%'}}
-                  />
-                  <button 
-                    className={`confirm-btn ${locationConfirmed ? 'confirmed' : ''}`} 
-                    onClick={() => { setLocationConfirmed(!locationConfirmed); getAudioContext(); }}
-                    style={{background: locationConfirmed ? '#00fa9a' : 'transparent', border:'1px solid #00fa9a', color: locationConfirmed ? '#000' : '#00fa9a', padding:'0 10px', borderRadius:'4px'}}
-                  >
-                    {locationConfirmed ? <X size={16}/> : <Check size={16}/>}
-                  </button>
+                   <div style={{flex:1, padding:'10px', background:'rgba(0,0,0,0.5)', borderRadius:'4px', border:'1px solid rgba(0, 250, 154, 0.3)'}}>
+                      <div style={{fontSize:'8px', color:'var(--text-muted)'}}>ACTIVE STATION</div>
+                      <div style={{fontSize:'12px', color:'var(--safe-green)', fontWeight:'bold'}}>{surgeryRoomId}</div>
+                   </div>
                 </div>
-                <button className="detect-btn" onClick={handleAutoDetect} style={{width:'100%', padding:'8px', background:'rgba(0, 243, 255, 0.1)', border:'1px solid var(--accent-cyan)', color:'var(--accent-cyan)', borderRadius:'4px', fontSize:'10px', cursor:'pointer'}}>AUTO DETECT GPS</button>
               </div>
 
               <div className="panel-section intercom-panel" style={{marginTop:'20px', border: isTalking ? '1px solid #ff3366' : '1px solid rgba(0, 243, 255, 0.3)', background: isTalking ? 'rgba(255, 51, 102, 0.1)' : 'rgba(0,0,0,0.3)'}}>
@@ -2189,32 +2265,6 @@ function App() {
                      </button>
                   </div>
                </div>
-            </div>
-          )}
-
-
-          
-          {assistantOpen && (
-            <div className="ai-assistant-panel">
-              <div className="ai-assistant-header" style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
-                <div>AI SURGICAL ASSISTANT <Zap size={10} /></div>
-                <button onClick={() => setAssistantOpen(false)} style={{background: 'none', border: 'none', color: '#ff3366', cursor: 'pointer', display: 'flex'}} title="Close AI Assistant">
-                  <X size={14} />
-                </button>
-              </div>
-              <div className="ai-assistant-messages">
-                {assistantMessages.map((m, i) => (<div key={i} className={`ai-msg ${m.from === 'ai' ? 'ai-response' : 'user-msg'}`}> {m.text} </div>))}
-                {assistantBusy && <div className="thinking-loader"><span></span><span></span><span></span></div>}
-              </div>
-              <form className="ai-assistant-input" onSubmit={(e) => { e.preventDefault(); handleAISending(); }}>
-                <input value={assistantInput} onChange={(e) => setAssistantInput(e.target.value)} placeholder="Voice or Text command..." />
-                <button type="button" onClick={startListening} style={{ color: isListening ? '#ef4444' : '#38bdf8', opacity: 1 }} title="Voice Command">
-                  <Mic size={15} className={isListening ? "pulse" : ""} />
-                </button>
-                <button type="submit" style={{ color: '#22c55e', opacity: 1 }} title="Send Command">
-                  <Send size={15} />
-                </button>
-              </form>
             </div>
           )}
         </>
