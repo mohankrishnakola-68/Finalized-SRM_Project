@@ -1512,7 +1512,7 @@ function App() {
               <button className={`cyber-button ${systemState !== 'IDLE' ? 'disabled' : ''}`} onClick={runSimulationWorkflow} disabled={systemState !== 'IDLE' || !selectedOrgan || isPatientBroadcasting}>1. INITIALIZE SCAN</button>
             </div>
 
-            <div className="panel-section" style={{ border: isPatientBroadcasting ? '1px solid #ff3366' : (selectedOrgan ? '1px solid var(--safe-green)' : '1px solid var(--accent-cyan)'), transition: '0.4s', boxShadow: selectedOrgan ? 'none' : '0 0 15px rgba(0, 229, 255, 0.2)', opacity: isPatientBroadcasting ? 0.6 : 1 }}>
+            <div className="panel-section" style={{ border: isPatientBroadcasting ? '1px solid #ff3366' : (selectedOrgan ? '1px solid var(--safe-green)' : '1px solid var(--accent-cyan)'), transition: '0.4s', boxShadow: selectedOrgan ? 'none' : '0 0 15px rgba(0, 229, 255, 0.2)', opacity: 1 }}>
               <h3 className="panel-title" style={{ color: isPatientBroadcasting ? '#ff3366' : (selectedOrgan ? 'var(--safe-green)' : 'var(--accent-cyan)') }}>
                 <Target size={14} /> 2. SET ANATOMICAL TARGET
                 {isPatientBroadcasting && <span className="pulse" style={{fontSize: '8px', color: '#ff3366', marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '4px'}}><div style={{width: '6px', height: '6px', background: '#ff3366', borderRadius: '50%'}}></div> BROADCAST ACTIVE</span>}
@@ -1524,7 +1524,8 @@ function App() {
                 style={{
                   width: '100%', background: 'rgba(0,0,0,0.6)', color: isPatientBroadcasting ? '#fff' : 'var(--accent-cyan)',
                   border: isPatientBroadcasting ? '1px solid #ff3366' : '1px solid var(--accent-cyan)', padding: '10px',
-                  borderRadius: '4px', fontFamily: 'monospace', outline: 'none', cursor: isPatientBroadcasting ? 'not-allowed' : 'pointer'
+                  borderRadius: '4px', fontFamily: 'monospace', outline: 'none', cursor: isPatientBroadcasting ? 'not-allowed' : 'pointer',
+                  marginBottom: isPatientBroadcasting ? '10px' : '0'
                 }}
               >
                 <option value="">{isPatientBroadcasting ? '-- BLOCKED BY BROADCAST --' : '-- SELECT TARGET --'}</option>
@@ -1535,8 +1536,26 @@ function App() {
                 <option value="Hand">METACARPAL (Hand)</option>
               </select>
               {isPatientBroadcasting && (
-                <div style={{fontSize: '9px', color: '#ff3366', marginTop: '6px', textAlign: 'center', fontWeight: 'bold'}}>
-                  ⚠️ MANUAL OVERRIDE DISABLED DURING LIVE PATIENT BROADCAST
+                <div style={{display: 'flex', flexDirection: 'column', gap: '8px'}}>
+                  <div style={{fontSize: '9px', color: '#ff3366', textAlign: 'center', fontWeight: 'bold'}}>
+                    ⚠️ MANUAL OVERRIDE DISABLED
+                  </div>
+                  <button 
+                    className="cyber-button-small risk-btn" 
+                    onClick={() => {
+                        if (socket) {
+                           socket.emit('broadcast-stop');
+                           socket.emit('broadcast-status', false);
+                        }
+                        setIsPatientBroadcasting(false);
+                        setBroadcastRequestStatus('IDLE');
+                        setShowLiveStream(false);
+                        playSciFiSound('danger');
+                    }}
+                    style={{width: '100%', padding: '10px', fontSize: '10px'}}
+                  >
+                    <X size={14} /> DISCONNECT LIVE BROADCAST
+                  </button>
                 </div>
               )}
             </div>
@@ -1999,7 +2018,7 @@ function App() {
 
           {/* BROADCAST APPROVAL DIALOG */}
           {broadcastRequestStatus === 'PENDING' && (
-            <div className="hud-flash-alert" style={{background: 'rgba(0,0,0,0.95)', border: '2px solid var(--accent-cyan)', top: '40%', height: 'auto', padding: '30px'}}>
+            <div className="hud-flash-alert" style={{background: 'rgba(0,0,0,0.95)', border: '2px solid var(--accent-cyan)', top: '40%', height: 'auto', padding: '30px', pointerEvents: 'auto'}}>
                <div style={{textAlign: 'center', width: '100%'}}>
                   <div className="pulse" style={{color: 'var(--accent-cyan)', fontSize: '20px', fontWeight: 'bold', letterSpacing: '2px', marginBottom: '20px'}}>
                      <Camera size={24} style={{verticalAlign: 'middle', marginRight: '10px'}}/> 
@@ -2016,6 +2035,7 @@ function App() {
                         onClick={() => {
                            setBroadcastRequestStatus('ACTIVE');
                            setIsPatientBroadcasting(true);
+                           setShowLiveStream(true);
                            if (socket) {
                               socket.emit('broadcast-response', 'ACCEPT');
                               socket.emit('broadcast-status', true);
