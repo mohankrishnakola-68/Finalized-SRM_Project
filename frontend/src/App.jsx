@@ -1582,7 +1582,15 @@ function App() {
         {/* SURGERY ROOM AUTHENTICATION OVERLAY */}
         {role === 'patient' && !isPatientVerified && (
           <div style={{position:'fixed', top:0, left:0, width:'100vw', height:'100vh', background:'rgba(0,0,0,0.95)', zIndex:9999, display:'flex', alignItems:'center', justifyContent:'center'}}>
-            <form onSubmit={(e) => { e.preventDefault(); if(surgeryRoomId) { setIsPatientVerified(true); playSciFiSound('engage'); triggerFlash(`✅ SURGERY ROOM ${surgeryRoomId} ONLINE`); } }} style={{width:'400px', background:'#1a2744', padding:'30px', border:'1px solid rgba(34,197,94,0.5)', borderRadius:'12px', boxShadow:'0 0 50px rgba(34,197,94,0.2)'}}>
+            <form onSubmit={(e) => { 
+                e.preventDefault(); 
+                if(surgeryRoomId) { 
+                  setIsPatientVerified(true); 
+                  setRoomId(surgeryRoomId); // CRITICAL: Update global roomId for Neural Link
+                  playSciFiSound('engage'); 
+                  triggerFlash(`✅ SURGERY ROOM ${surgeryRoomId} ONLINE`); 
+                } 
+            }} style={{width:'400px', background:'#1a2744', padding:'30px', border:'1px solid rgba(34,197,94,0.5)', borderRadius:'12px', boxShadow:'0 0 50px rgba(34,197,94,0.2)'}}>
                <h2 style={{color:'var(--safe-green)', textAlign:'center', letterSpacing:'2px', marginBottom:'20px'}}><Shield size={24} style={{verticalAlign:'middle'}}/> SURGERY ROOM LOGIN</h2>
                 <div style={{marginBottom:'20px'}}>
                   <label style={{display:'block', fontSize:'10px', color:'var(--safe-green)', marginBottom:'5px'}}>ROOM ID *</label>
