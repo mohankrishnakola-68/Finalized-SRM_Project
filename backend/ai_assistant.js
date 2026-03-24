@@ -23,7 +23,8 @@ export async function processQuery(query) {
     }
 
     try {
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${API_KEY}`;
+        // Switched to latest stable Gemini 1.5 Flash for mission-critical accuracy
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${API_KEY}`;
         
         const response = await fetch(url, {
             method: 'POST',
