@@ -759,10 +759,15 @@ function App() {
      }
   }, [role, socket, patientCameraActive]);
 
-  // State Sync: Triggered only on actual state change (No overhead heartbeat)
+  // State Sync: Heartbeat (Every 2s) + Change-trigger (Guarantees late-joiners are synced)
   useEffect(() => {
      if (role === 'surgeon' && socket) {
-        socket.emit('session-sync', { selectedOrgan, systemState, aiVisionOverlay, detectionZones, classifiedPaths, vitals, isCompromised });
+        const payload = { selectedOrgan, systemState, aiVisionOverlay, detectionZones, classifiedPaths, vitals, isCompromised };
+        socket.emit('session-sync', payload); 
+        const heartBeat = setInterval(() => {
+           socket.emit('session-sync', payload);
+        }, 2000); // 2s heartbeat for high-fidelity sync
+        return () => clearInterval(heartBeat);
      }
   }, [role, socket, selectedOrgan, systemState, aiVisionOverlay, detectionZones, classifiedPaths, vitals, isCompromised]);
 
@@ -2240,7 +2245,7 @@ function App() {
 
           {/* BROADCAST APPROVAL DIALOG */}
           {broadcastRequestStatus === 'PENDING' && (
-            <div className="hud-flash-alert" style={{background: 'rgba(0,0,0,0.95)', border: '2px solid var(--accent-cyan)', top: '40%', height: 'auto', padding: '30px', pointerEvents: 'auto'}}>
+            <div className="hud-flash-alert" style={{background: 'rgba(5, 15, 30, 0.98)', border: '1px solid #00fa9a', top: '30%', height: 'auto', padding: '40px', pointerEvents: 'auto', zIndex: 10000, boxShadow: '0 0 50px rgba(0, 250, 154, 0.3)'}}>
                <div style={{textAlign: 'center', width: '100%'}}>
                   <div className="pulse" style={{color: 'var(--accent-cyan)', fontSize: '20px', fontWeight: 'bold', letterSpacing: '2px', marginBottom: '20px'}}>
                      <Camera size={24} style={{verticalAlign: 'middle', marginRight: '10px'}}/> 
