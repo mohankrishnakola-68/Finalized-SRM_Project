@@ -398,6 +398,10 @@ function App() {
   const [currentSessionId, setCurrentSessionId] = useState(null); // MASTER SESSION TRACKING
   const [isPatientBroadcasting, setIsPatientBroadcasting] = useState(false); // Global sync for broadcast status
   const [broadcastRequestStatus, setBroadcastRequestStatus] = useState('IDLE'); // 'IDLE' | 'PENDING' | 'ACTIVE' | 'REJECTED'
+  
+  // Intercom Refs
+  const mediaRecorderRef = useRef(null);
+  const audioChunksRef = useRef([]);
 
   const handleSurgeonAuth = async (e) => {
     e.preventDefault();
@@ -594,20 +598,23 @@ function App() {
         }
       });
 
-      newSocket.on('audio-packet', (blob) => {
-        // Ensure AudioContext is resumed (Browser Security requirement)
-        getAudioContext(); 
-        
-        const audioBlob = new Blob([blob], { type: 'audio/webm' });
-        const audioUrl = URL.createObjectURL(audioBlob);
+      newSocket.on('audio-packet', (data) => {
+        // High-Precision Audio Link
+        const ctx = getAudioContext();
+        if (ctx) ctx.resume();
+
+        // Handle Buffer/ArrayBuffer conversion from Node.JS relay
+        const blob = new Blob([data], { type: 'audio/webm' });
+        const audioUrl = URL.createObjectURL(blob);
         const audio = new Audio(audioUrl);
-        audio.play().catch(e => {
-           console.log('Audio Blocked - Interaction Required:', e);
-           // Fallback: trigger a flash so the user knows they need to click somewhere
-           triggerFlash("🔊 INCOMING VOICE (CLICK TO UNMUTE)");
+        
+        audio.play().then(() => {
+           setRemoteTalking(true);
+           setTimeout(() => setRemoteTalking(false), 2000);
+        }).catch(e => {
+           console.log('Audio Intercept Blocked:', e);
+           triggerFlash("🔊 INCOMING VOICE [CLICK DASHBOARD TO UNMUTE]");
         });
-        setRemoteTalking(true);
-        setTimeout(() => setRemoteTalking(false), 2000);
       });
 
       newSocket.on('live-stream-frame', (frame) => {
@@ -668,29 +675,35 @@ function App() {
     }
   }, [socket, roomId]);
 
-  // Audio Recording Toggle
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      mediaRecorder = new MediaRecorder(stream);
-      audioChunks = [];
-      mediaRecorder.ondataavailable = (e) => audioChunks.push(e.data);
-      mediaRecorder.onstop = () => {
-        const blob = new Blob(audioChunks, { type: 'audio/webm' });
-        socket?.emit('audio-packet', blob);
+      mediaRecorderRef.current = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+      audioChunksRef.current = [];
+      
+      mediaRecorderRef.current.ondataavailable = (e) => {
+        if (e.data.size > 0) audioChunksRef.current.push(e.data);
+      };
+      
+      mediaRecorderRef.current.onstop = () => {
+        const fullBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        if (fullBlob.size > 100) { // Avoid sending empty/tiny packets
+           socket?.emit('audio-packet', fullBlob);
+        }
         stream.getTracks().forEach(t => t.stop());
       };
-      mediaRecorder.start();
+      
+      mediaRecorderRef.current.start();
       setIsTalking(true);
       playSciFiSound('engage');
     } catch (err) {
-      alert("Microphone Access Required for Intercom");
+      alert("Microphone Access Required for Haptic-Q Intercom");
     }
   };
 
   const stopRecording = () => {
-    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-      mediaRecorder.stop();
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop();
       setIsTalking(false);
     }
   };
@@ -699,8 +712,9 @@ function App() {
     let frameId;
     const updateSmoothCursor = () => {
       // Direct variable mutation (no React re-render)
-      smoothCursorRef.current.x += (remoteCursorRef.current.x - smoothCursorRef.current.x) * 0.15;
-      smoothCursorRef.current.y += (remoteCursorRef.current.y - smoothCursorRef.current.y) * 0.15;
+      // Neural Smoothing: Increased factor from 0.15 to 0.45 for near-zero perceived lag
+      smoothCursorRef.current.x += (remoteCursorRef.current.x - smoothCursorRef.current.x) * 0.45;
+      smoothCursorRef.current.y += (remoteCursorRef.current.y - smoothCursorRef.current.y) * 0.45;
       
       // Direct DOM Assignment for absolute max performance
       if (cursorDOMRef.current) {
@@ -726,14 +740,15 @@ function App() {
            }
          }).catch(e => console.log("Camera access denied or missing"));
 
-       const interval = setInterval(() => {
-          if (videoRef.current && streamCanvasRef.current) {
-             const ctx = streamCanvasRef.current.getContext('2d');
-             ctx.drawImage(videoRef.current, 0, 0, 640, 480);
-             const frame = streamCanvasRef.current.toDataURL('image/jpeg', 0.4);
-             socket.emit('live-stream-frame', frame);
-          }
-       }, 66); // ~15 FPS
+        const interval = setInterval(() => {
+           if (videoRef.current && streamCanvasRef.current) {
+              const ctx = streamCanvasRef.current.getContext('2d');
+              // Resolution Optimization: 480p is enough for diagnostic secondary view
+              ctx.drawImage(videoRef.current, 0, 0, 480, 360); 
+              const frame = streamCanvasRef.current.toDataURL('image/jpeg', 0.3); // Lower quality = lower latency
+              socket.emit('live-stream-frame', frame);
+           }
+        }, 100); // 10 FPS is optimal for real-time haptic priority
 
        return () => {
           clearInterval(interval);
@@ -744,15 +759,10 @@ function App() {
      }
   }, [role, socket, patientCameraActive]);
 
-  // Broadcast full session state from Surgeon console (Master Node)
+  // State Sync: Triggered only on actual state change (No overhead heartbeat)
   useEffect(() => {
      if (role === 'surgeon' && socket) {
-        const sessionPayload = { selectedOrgan, systemState, aiVisionOverlay, detectionZones, classifiedPaths, vitals, isCompromised };
-        socket.emit('session-sync', sessionPayload);
-        const beat = setInterval(() => {
-           socket.emit('session-sync', sessionPayload);
-        }, 3000); // Pulse state every 3 sec for robustness
-        return () => clearInterval(beat);
+        socket.emit('session-sync', { selectedOrgan, systemState, aiVisionOverlay, detectionZones, classifiedPaths, vitals, isCompromised });
      }
   }, [role, socket, selectedOrgan, systemState, aiVisionOverlay, detectionZones, classifiedPaths, vitals, isCompromised]);
 
@@ -916,15 +926,9 @@ function App() {
 
       const now = performance.now();
       // Throttle network transmit to 60 FPS (16ms) to prevent network buffering
-      if (now - netThrottleRef.current > 16) {
-        if (socket) socket.emit('cursor-move', { 
-          x: xPct, y: yPct, danger: inDanger, 
-          organ: selectedOrgan, 
-          systemState, 
-          vision: aiVisionOverlay,
-          cutting: isCutting,
-          point: incisionPoint
-        });
+      // High-Frequency Haptic Link: Throttled to 33ms (30 FPS) for packet stability
+      if (now - netThrottleRef.current > 33) {
+        if (socket) socket.emit('cursor-move', { x: xPct, y: yPct, danger: inDanger });
         netThrottleRef.current = now;
       }
     }
@@ -1606,7 +1610,10 @@ function App() {
           </div>
         )}
 
-      <header className="top-bar">
+        {/* SURGERY SESSION HUD & INTERFACE (Only show when active) */}
+        {((role === 'surgeon' && isSurgeryStarted) || (role === 'patient' && isPatientVerified)) && (
+          <>
+            <header className="top-bar">
 
         {/* COL 1 — BRAND */}
         <div className="brand-clinical">
@@ -2267,9 +2274,11 @@ function App() {
                </div>
             </div>
           )}
-        </>
-      )}
-      </div>
+          </>
+        )}
+      </>
+    )}
+  </div>
     </ErrorBoundary>
   );
 }
